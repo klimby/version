@@ -30,6 +30,16 @@ func (v V) String() string {
 	return string(v)
 }
 
+// Empty returns true if the version is empty.
+func (v V) Empty() bool {
+	return v.String() == "" || v.Invalid()
+}
+
+// Equal returns true if the version is equal to the argument.
+func (v V) Equal(o V) bool {
+	return v.Compare(o) == 0
+}
+
 // FormatString returns the string value of the version in the specified format.
 func (v V) FormatString() string {
 	if v.Invalid() {

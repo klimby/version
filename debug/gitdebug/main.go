@@ -3,15 +3,59 @@ package main
 import (
 	"fmt"
 	"path/filepath"
-
-	git2 "github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/object"
+	"regexp"
 
 	"github.com/klimby/version/internal/git"
 )
 
 func main() {
+
+	reg := regexp.MustCompile(`#(?P<iss>[A-Za-z0-9-_]+)`)
+
+	str := "Close 123"
+
+	res := reg.ReplaceAllStringFunc(str, func(match string) string {
+		word := match[1:] // Удаление символа '#'
+		return fmt.Sprintf("[%s](https://foo/%s)", word, word)
+	})
+
+	fmt.Println(res)
+	return
+
+	/*messages := []string{
+			`init
+
+	BREAKING CHANGE: test
+
+	Closes: #123
+	`,
+			`feat(SCOPES): short message
+
+	long message 01
+	long message 02
+
+	BREAKING CHANGE: test
+
+	Closes: #123
+	`,
+		}
+
+		cm := changelog.NewCommitTpl(messages[1], func(options *changelog.CommitTplOptions) {
+			options.RepoHref = "https://github.com/company/project/"
+			options.IssueHref = "https://github.com/company/project/issues/"
+		})
+
+		var b strings.Builder
+
+		if err := cm.ApplyTemplate(changelog.MarkdownTpl, &b); err != nil {
+			fmt.Println(err)
+
+			return
+		}
+
+		console.Info(b.String())
+
+		return*/
 
 	p := filepath.Join("/home", "klim", "Projects", "version-test")
 
@@ -24,128 +68,11 @@ func main() {
 		return
 	}
 
-	repo := r.GitRepo()
-	tagRefs, err := repo.Tags()
-	if err != nil {
-		fmt.Println(err)
+	_ = r
 
-		return
-	}
+	//	repo := r.GitRepo()
 
-	fmt.Println(r.RemoteURL())
+}
 
-	return
-
-	tags := make([]plumbing.Hash, 0)
-
-	for {
-		tagRef, err := tagRefs.Next()
-		if err != nil {
-			break
-		}
-
-		if tagRef == nil {
-			break
-		}
-
-		fmt.Println(tagRef.Name())
-		fmt.Println(tagRef.Target())
-
-		tags = append(tags, tagRef.Hash())
-	}
-
-	fmt.Println(tags)
-
-	lastTag := tags[len(tags)-1]
-
-	obj, err := repo.TagObject(lastTag)
-	if err != nil {
-		fmt.Println(err)
-
-		return
-	}
-
-	_ = obj
-
-	return
-
-	tagObs, err := repo.TagObjects()
-	if err != nil {
-		fmt.Println(err)
-
-		return
-	}
-
-	var lastOb *object.Tag
-
-	for {
-		tagOb, err := tagObs.Next()
-		if err != nil {
-			break
-		}
-
-		if tagOb == nil {
-			break
-		}
-
-		if tagOb.Hash == lastTag {
-			lastOb = tagOb
-
-			break
-		}
-
-		fmt.Println(tagOb.Name)
-	}
-
-	fmt.Println(lastOb)
-
-	fmt.Println("=========================================")
-
-	if lastOb == nil {
-		return
-	}
-
-	logs, err := repo.Log(&git2.LogOptions{
-		//From: lastOb.Target,
-	})
-	if err != nil {
-		fmt.Println(err)
-
-		return
-	}
-
-	for {
-		commit, err := logs.Next()
-		if err != nil {
-			break
-		}
-
-		if commit == nil {
-			break
-		}
-
-		if commit.Hash == lastOb.Target {
-			break
-		}
-
-		//fmt.Println()
-		fmt.Println(commit.Message)
-		fmt.Println(commit.Hash)
-
-	}
-
-	/*nextPatch, exists, err := r.NextPatch()
-	if err != nil {
-		fmt.Println(err)
-
-		return
-	}
-
-	fmt.Println(nextPatch, exists)
-
-	if err := r.CommitTag(nextPatch); err != nil {
-		fmt.Println(err)
-
-		return
-	}*/
+type CommitMessage struct {
 }
