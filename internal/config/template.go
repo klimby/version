@@ -35,6 +35,10 @@ changelog:
 	# 	- IssueURL: https://github.com/company/project/issues/
 	# If empty, ang repository is CitHub, then issueHref will be set from remote repository URL.
 	IssueURL: "{{ .ChangelogOptions.IssueURL }}"
+	# Show author in changelog.
+	showAuthor: {{ .ChangelogOptions.ShowAuthor }}
+	# Show body in changelog comment.
+	showBody: {{ .ChangelogOptions.ShowBody }}
 	# Commit types for changelog.
 	# Type - commit type, value - commit type name.
 	# If empty, then all commit types will be used, except Breaking Changes.

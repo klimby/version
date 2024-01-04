@@ -63,6 +63,10 @@ type changelogOptions struct {
 	Title string `yaml:"title"`
 	// Issue href template.
 	IssueURL string `yaml:"issueURL"`
+	// ShowAuthor is a flag that indicates that the author is shown in the changelog.
+	ShowAuthor bool `yaml:"showAuthor"`
+	// ShowBody is a flag that indicates that the body is shown in the changelog comment.
+	ShowBody bool `yaml:"showBody"`
 	// CommitTypes is a commit types for changelog.
 	CommitTypes []CommitName `yaml:"commitTypes"`
 }
@@ -111,6 +115,9 @@ func newConfig(f file.Reader) (_ C, err error) {
 			Generate:    viper.GetBool(GenerateChangelog),
 			FileName:    File(viper.GetString(ChangelogFileName)),
 			Title:       viper.GetString(ChangelogTitle),
+			IssueURL:    viper.GetString(ChangelogIssueURL),
+			ShowAuthor:  viper.GetBool(ChangelogShowAuthor),
+			ShowBody:    viper.GetBool(ChangelogShowBody),
 			CommitTypes: CommitNames(),
 		},
 	}

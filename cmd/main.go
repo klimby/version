@@ -1,18 +1,18 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
 
-	"github.com/klimby/version/internal/backup"
+	"github.com/klimby/version/internal/action"
 	"github.com/klimby/version/internal/bump"
+	"github.com/klimby/version/internal/changelog"
 	"github.com/klimby/version/internal/config"
 	"github.com/klimby/version/internal/console"
 	"github.com/klimby/version/internal/file"
 	"github.com/klimby/version/internal/git"
-	version2 "github.com/klimby/version/pkg/version"
+	vers "github.com/klimby/version/pkg/version"
 	flags "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
@@ -21,7 +21,6 @@ import (
 var version = "0.0.0"
 
 func main() {
-	ctx := context.Background()
 	code := 0
 	defer os.Exit(code)
 
@@ -52,23 +51,22 @@ func main() {
 		options.Path = viper.GetString(config.WorkDir)
 	})
 	if err != nil {
-		console.Error(err.Error())
-		code = 1
+		code = errorHandler(err)
 
 		return
 	}
 
 	remote, err := repo.RemoteURL()
-	if err != nil || remote == "" {
-		console.Warn("Remote repository URL is not set.")
-	} else {
-		viper.Set(config.RemoteURL, remote)
+	if err != nil {
+		console.Warn(err.Error())
 	}
+
+	config.SetUrlFromGit(remote)
 
 	cfg, err := config.Load(f)
 	if err != nil {
-		fmt.Println(err)
-		code = 1
+		code = errorHandler(err)
+
 		return
 	}
 
@@ -104,27 +102,31 @@ func main() {
 		if errors.Is(err, config.ErrConfigWarn) {
 			console.Warn(err.Error())
 		} else {
-			console.Error(err.Error())
-			code = 1
+			code = errorHandler(err)
 
 			return
 		}
 	}
 
+	chGen := changelog.NewGenerator(f, repo)
+
+	if viper.GetBool(config.DryRun) {
+		console.Info("Dry run mode.")
+	}
+
+	actions := action.New(func(o *action.Args) {
+		o.Repo = repo
+		o.Config = cfg
+		o.ChGen = chGen
+		o.ReadWriter = f
+	})
+
 	switch {
 	case generateConfig:
-		fmt.Println("generate config")
-		p := config.File(viper.GetString(config.ConfigFile))
-		if err := backup.Create(f, p.Path()); err != nil {
-			console.Error(err.Error())
-			code = 1
+		console.Notice("Generate config file\n")
 
-			return
-		}
-
-		if err := config.Generate(f, cfg); err != nil {
-			console.Error(err.Error())
-			code = 1
+		if err := actions.GenerateConfig(); err != nil {
+			code = errorHandler(err)
 
 			return
 		}
@@ -132,28 +134,62 @@ func main() {
 		console.Success("Config file generated.")
 
 	case generateChangelog:
-		fmt.Println("generate changelog")
+		console.Notice("Generate changelog\n")
+		if err := actions.GenerateChangelog(); err != nil {
+			code = errorHandler(err)
+
+			return
+		}
+
+		console.Success("Changelog generated.")
 
 	case major:
-		fmt.Println("major")
+		console.Notice("Bump major version\n")
+		if err := actions.NextVersion(git.NextMajor, ""); err != nil {
+			code = errorHandler(err)
+
+			return
+		}
+
+		console.Success("Version bumped.")
 
 	case minor:
-		fmt.Println("minor")
+		console.Notice("Bump minor version\n")
+
+		if err := actions.NextVersion(git.NextMinor, ""); err != nil {
+			code = errorHandler(err)
+
+			return
+		}
+
+		console.Success("Version bumped.")
 
 	case patch:
-		fmt.Println("patch")
+		console.Notice("Bump patch version\n")
+
+		if err := actions.NextVersion(git.NextPatch, ""); err != nil {
+			code = errorHandler(err)
+
+			return
+		}
+
+		console.Success("Version bumped.")
 
 	case ver != "":
-		fmt.Println("version")
+		console.Notice("Bump version to " + ver + "\n")
+
+		if err := actions.NextVersion(git.NextCustom, vers.V(ver)); err != nil {
+			code = errorHandler(err)
+
+			return
+		}
+
+		console.Success("Version bumped.")
 
 	case removeBackup:
-		fmt.Println("removeBackup")
-		p := config.File(viper.GetString(config.ConfigFile))
-		backup.Remove(f, p.Path())
-
-		for _, bmp := range cfg.Bump {
-			backup.Remove(f, bmp.File.Path())
-		}
+		console.Notice("Remove backup files\n")
+		actions.RemoveBackup(f)
+		console.Success("Backup files removed.")
 
 	case test:
 
@@ -166,7 +202,7 @@ func main() {
 			},
 		}
 
-		ver := version2.V("1.0.0")
+		ver := vers.V("1.0.0")
 
 		viper.Set(config.Backup, true)
 
@@ -178,8 +214,16 @@ func main() {
 		flagSet.PrintDefaults()
 	}
 
-	_ = ctx
-
 	return
 
+}
+
+func errorHandler(err error) int {
+	if err != nil {
+		console.Error(err.Error())
+
+		return 1
+	}
+
+	return 0
 }

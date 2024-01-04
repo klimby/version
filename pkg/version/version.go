@@ -222,7 +222,7 @@ type HasVersion interface {
 //
 // Example usage:
 //
-//	slices.SortFunc(tags, version.CompareDESC[version.V])
+//	slices.SortFunc(tags, version.CompareDESC[version.Version])
 func CompareASC[T HasVersion](v, o T) int {
 	return v.Version().Compare(o.Version())
 }
@@ -232,7 +232,7 @@ func CompareASC[T HasVersion](v, o T) int {
 //
 // Example usage:
 //
-//	slices.SortFunc(tags, version.CompareDESC[version.V])
+//	slices.SortFunc(tags, version.CompareDESC[version.Version])
 func CompareDESC[T HasVersion](v, o T) int {
 	c := v.Version().Compare(o.Version())
 

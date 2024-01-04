@@ -1,5 +1,6 @@
 package config
 
+// Viper keys.
 const (
 	AppName = "appName"
 	Version = "version"
@@ -14,13 +15,15 @@ const (
 	AutoGenerateNextPatch = "autoGenerateNextPatch" // Auto generate next patch version, if version exists. Default: false.
 	AllowDowngrades       = "allowDowngrades"       // Allow version downgrades. Default: false.
 
-	GenerateChangelog = "generateChangelog" // Generate changelog. Default: true.
-	ChangelogFileName = "changelogFileName" // Changelog file name. Default: CHANGELOG.md.
-	ChangelogTitle    = "changelogTitle"    // Changelog title. Default: Changelog.
-	ChangelogIssueURL = "changelogIssueURL" // Issue href template (with last slash). Default: empty.
+	GenerateChangelog   = "changelog.generate"   // Generate changelog. Default: true.
+	ChangelogFileName   = "changelog.fileName"   // Changelog file name. Default: CHANGELOG.md.
+	ChangelogTitle      = "changelog.title"      // Changelog title. Default: Changelog.
+	ChangelogIssueURL   = "changelog.issueURL"   // Issue href template (with last slash). Default: empty.
+	ChangelogShowAuthor = "changelog.showAuthor" // Show author in changelog. Default: false.
+	ChangelogShowBody   = "changelog.showBody"   // Show body in changelog comment. Default: true.
 
-	ChangelogCommitTypes = "changelogCommitTypes" // Commit types for changelog. Map[string]string. Key - type key, value- type name.
-	ChangelogCommitOrder = "changelogCommitOrder" // Commit types order for changelog. []string. Default: empty.
+	ChangelogCommitTypes = "changelog.commitTypes" // Commit types for changelog. Map[string]string. Key - type key, value- type name.
+	ChangelogCommitOrder = "changelog.commitOrder" // Commit types order for changelog. []string. Default: empty.
 
 	Backup = "backupChanged" // Backup changed files. Default: false.
 	Silent = "silent"        // Silent mode from flags.
@@ -35,9 +38,11 @@ const (
 	_AutoGenerateNextPatch = false
 	_AllowDowngrades       = false
 
-	_GenerateChangelog = true
-	_ChangelogFileName = "CHANGELOG.md"
-	_ChangelogTitle    = "Changelog"
+	_GenerateChangelog   = true
+	_ChangelogFileName   = "CHANGELOG.md"
+	_ChangelogTitle      = "Changelog"
+	_ChangelogShowAuthor = false
+	_ChangelogShowBody   = true
 
 	_ConfigFile = "config.yaml"
 )

@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/klimby/version/internal/config"
+	"github.com/klimby/version/internal/console"
+	"github.com/klimby/version/internal/git"
 	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/viper"
 )
@@ -17,8 +19,8 @@ import (
 type TagTpl struct {
 	tag             version.V
 	prev            version.V
-	d               time.Time
-	BreakingChanges []CommitTpl
+	Date            string
+	BreakingChanges []commitTpl
 	Blocks          []TagTplBlock
 }
 
@@ -28,58 +30,42 @@ type TagTplBlock struct {
 	// Name is a commit name.
 	Name string
 	// Commits is a list of commits.
-	Commits []CommitTpl
-}
-
-type gitCommit interface {
-	Message() string
-	Hash() string
-	IsTag() bool
-	Version() version.V
-	Date() time.Time
+	Commits []commitTpl
 }
 
 func NewTagTpl(tag version.V, date time.Time) TagTpl {
+	nms := config.CommitNames()
+
+	blocks := make([]TagTplBlock, len(nms))
+
+	for i, nm := range nms {
+		blocks[i] = TagTplBlock{
+			CommitType: nm.Type,
+			Name:       nm.Name,
+			Commits:    []commitTpl{},
+		}
+	}
+
 	return TagTpl{
 		tag:             tag,
-		d:               date,
-		BreakingChanges: []CommitTpl{},
-		Blocks:          bloks(),
+		Date:            date.Format("2006-01-02"),
+		BreakingChanges: []commitTpl{},
+		Blocks:          blocks,
 	}
 }
 
-// Date returns a tag date as a string YYYY-MM-DD.
-func (t *TagTpl) Date() string {
-	return t.d.Format("2006-01-02")
-}
-
-// URL returns a tag URL.
-func (t *TagTpl) URL() string {
-	remoteURL := viper.GetString(config.RemoteURL)
-	if remoteURL == "" || t.tag.Invalid() || t.prev.Invalid() {
-		return ""
-	}
-
-	return fmt.Sprintf("%s/compare/%s...%s", remoteURL, t.prev.GitVersion(), t.tag.GitVersion())
-}
-
-// Name returns a tag name.
-func (t *TagTpl) Name() string {
-	return t.tag.FormatString()
-}
-
-// SetPrev sets the previous tag.
-func (t *TagTpl) SetPrev(prev version.V) {
+// setPrev sets the previous tag.
+func (t *TagTpl) setPrev(prev version.V) {
 	t.prev = prev
 }
 
-// AddCommit adds a commit to the tag.
-func (t *TagTpl) AddCommit(c gitCommit) {
+// addCommit adds a commit to the tag.
+func (t *TagTpl) addCommit(c git.Commit) {
 	if c.IsTag() {
 		return
 	}
 
-	tpl := NewCommitTpl(c.Message(), c.Hash())
+	tpl := newCommitTpl(c)
 
 	if tpl.isBreakingChange {
 		t.BreakingChanges = append(t.BreakingChanges, tpl)
@@ -91,46 +77,18 @@ func (t *TagTpl) AddCommit(c gitCommit) {
 			t.Blocks[i].Commits = append(t.Blocks[i].Commits, tpl)
 			return
 		}
-
 	}
 }
 
-func bloks() []TagTplBlock {
-	nms := config.CommitNames()
-
-	blocks := make([]TagTplBlock, len(nms))
-
-	for i, nm := range nms {
-		blocks[i] = TagTplBlock{
-			CommitType: nm.Type,
-			Name:       nm.Name,
-			Commits:    []CommitTpl{},
-		}
-	}
-
-	return blocks
-}
-
-// ApplyTemplate applies the template to the commit message.
-func (t *TagTpl) ApplyTemplate(tplType TemplateType, wr io.Writer) error {
-	switch tplType {
-	case MarkdownTpl:
-		return t.apply(wr, tplType, _tagMarkdownTpl)
-	case ConsoleTpl:
-		return t.apply(wr, tplType, _tagConsoleTpl)
-	default:
-		return fmt.Errorf("unknown template type: %d", tplType)
-	}
-}
-
-func (t *TagTpl) apply(wr io.Writer, tplType TemplateType, tpl string) error {
+// applyTemplate applies the template to the commit message.
+func (t *TagTpl) applyTemplate(wr io.Writer) error {
 	funcMap := template.FuncMap{
-		"versionName": versionName(tplType),
-		"commitName":  commitName(tplType),
-		"addIssueURL": addIssueURL(tplType),
+		"versionName": versionName(),
+		"commitName":  commitName(),
+		"addIssueURL": addIssueURL(),
 	}
 
-	tmpl, err := template.New("tag").Funcs(funcMap).Parse(tpl)
+	tmpl, err := template.New("tag").Funcs(funcMap).Parse(_tagMarkdownTpl)
 	if err != nil {
 		return fmt.Errorf("parse tag template error: %w", err)
 	}
@@ -142,14 +100,11 @@ func (t *TagTpl) apply(wr io.Writer, tplType TemplateType, tpl string) error {
 	return nil
 }
 
-func versionName(tplType TemplateType) func(t TagTpl) string {
+// versionName returns a version name string in template.
+func versionName() func(t TagTpl) string {
 	remoteURL := viper.GetString(config.RemoteURL)
 
 	return func(t TagTpl) string {
-		if tplType == ConsoleTpl {
-			return t.tag.FormatString()
-		}
-
 		if remoteURL == "" || t.tag.Invalid() || t.prev.Invalid() {
 			return t.tag.FormatString()
 		}
@@ -163,50 +118,54 @@ func versionName(tplType TemplateType) func(t TagTpl) string {
 	}
 }
 
-func commitName(tplType TemplateType) func(c CommitTpl) string {
+// commitName returns a commit name string in template.
+func commitName() func(c commitTpl) string {
 	remoteURL := viper.GetString(config.RemoteURL)
+	showAuthor := viper.GetBool(config.ChangelogShowAuthor)
 
-	return func(c CommitTpl) string {
+	return func(c commitTpl) string {
 
 		var b strings.Builder
 
 		if c.Scope != "" {
 			b.WriteString("**")
 			b.WriteString(c.Scope)
-			b.WriteString(":**  ")
+			b.WriteString(":** ")
 		}
 
-		b.WriteString(c.Short)
+		b.WriteString(c.Message)
 
 		u, err := url.JoinPath(remoteURL, "commit", c.Hash)
-		if err != nil {
+		if err != nil || remoteURL == "" {
 			u = ""
 		}
 
-		if tplType == MarkdownTpl && u != "" {
-			b.WriteString(" ([")
-			b.WriteString(c.ShortHash)
-			b.WriteString("](")
-			b.WriteString(u)
-			b.WriteString("))")
-
-			return b.String()
+		if u != "" {
+			b.WriteString(" ([" + c.shortHash() + "](" + u + "))")
+		} else {
+			b.WriteString(" (" + c.shortHash() + ")")
 		}
 
-		b.WriteString(" (")
-		b.WriteString(c.ShortHash)
-		b.WriteString(")")
+		if showAuthor && c.Author != "" {
+			b.WriteString(" - ")
+			if c.AuthorHref != "" {
+				b.WriteString(fmt.Sprintf("[%s](%s)", c.Author, c.AuthorHref))
+			} else {
+				b.WriteString(c.Author)
+			}
+		}
 
 		return b.String()
 	}
 }
 
-func addIssueURL(tplType TemplateType) func(s string) string {
+// addIssueURL returns a commit message with issue URL in template.
+func addIssueURL() func(s string) string {
 	issueURL := viper.GetString(config.ChangelogIssueURL)
 	re := regexp.MustCompile(`#\w+`)
 
 	return func(s string) string {
-		if issueURL == "" || tplType == ConsoleTpl {
+		if issueURL == "" {
 			return s
 		}
 
@@ -228,16 +187,16 @@ type TagsTpl struct {
 	Tags []TagTpl
 }
 
-func NewTagsTpl(commits []gitCommit) (TagsTpl, error) {
+func NewTagsTpl(commits []git.Commit) (TagsTpl, error) {
 	var tags []TagTpl
 
 	for _, c := range commits {
 		if c.IsTag() {
 			if len(tags) > 0 {
-				tags[len(tags)-1].SetPrev(c.Version())
+				tags[len(tags)-1].setPrev(c.Version)
 			}
 
-			t := NewTagTpl(c.Version(), c.Date())
+			t := NewTagTpl(c.Version, c.Date)
 
 			tags = append(tags, t)
 
@@ -245,13 +204,26 @@ func NewTagsTpl(commits []gitCommit) (TagsTpl, error) {
 		}
 
 		if len(tags) == 0 {
-			return TagsTpl{}, fmt.Errorf("%w: last commit is not tagged (last commit must be version)", errGenerate)
+			console.Info(fmt.Sprintf("commit %s is not included in version, skip", c.Hash))
+
+			continue
 		}
 
-		tags[len(tags)-1].AddCommit(c)
+		tags[len(tags)-1].addCommit(c)
 	}
 
 	return TagsTpl{
 		Tags: tags,
 	}, nil
+}
+
+// applyTemplate applies the template to the commit message.
+func (t TagsTpl) applyTemplate(wr io.Writer) error {
+	for _, t := range t.Tags {
+		if err := t.applyTemplate(wr); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

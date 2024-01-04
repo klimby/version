@@ -1,11 +1,11 @@
 package changelog
 
 import (
-	"net/url"
 	"regexp"
 	"strings"
 
 	"github.com/klimby/version/internal/config"
+	"github.com/klimby/version/internal/git"
 	"github.com/klimby/version/pkg/convert"
 	"github.com/spf13/viper"
 )
@@ -15,49 +15,55 @@ var (
 	_breakingChangeRegexp = regexp.MustCompile(`^BREAKING[ -]CHANGE:.+$`)
 )
 
-// CommitTpl is a commit message.
-type CommitTpl struct {
+// commitTpl is a commit message.
+type commitTpl struct {
 	// source is an original commit message.
 	source string
 	// CommitType is a commit type (feat, fix, etc.).
 	CommitType string
 	// Scope is a commit Scope.
 	Scope string
-	// Short is a Short commit message.
-	Short string
+	// Message is a commit message.
+	Message string
 	// Commit body.
 	Body []string
 	// isBreakingChange is a breaking change flag (existed "!" in the title or "BREAKING CHANGE:" in the body).
 	isBreakingChange bool
-	// ShortHash is a short commit hash.
-	ShortHash string
-	Hash      string
-	// IssueURL is an issue URL.
-	IssueURL string
-	// URL is a commit URL.
-	URL string
+	// Hash is a commit hash.
+	Hash string
+	// Author is a commit author.
+	Author string
+	// AuthorHref is a commit author href.
+	AuthorHref string
 }
 
-// NewCommitTpl returns a new CommitTpl.
-func NewCommitTpl(s, hash string) CommitTpl {
-	m := CommitTpl{
-		source:    s,
-		ShortHash: shortHash(hash),
-		Hash:      hash,
-		URL:       hashURL(hash),
+// shortHash returns the short commit hash.
+func (m commitTpl) shortHash() string {
+	return m.Hash[:7]
+}
+
+// newCommitTpl returns a new commitTpl.
+func newCommitTpl(gc git.Commit) commitTpl {
+	m := commitTpl{
+		source:     gc.Message,
+		Hash:       gc.Hash,
+		Author:     gc.Author,
+		AuthorHref: gc.AuthorHref(),
 	}
 
-	spl := strings.Split(s, "\n")
+	spl := strings.Split(m.source, "\n")
+
+	showBody := viper.GetBool(config.ChangelogShowBody)
 
 	matches := _titleRegexp.FindStringSubmatch(spl[0])
 
 	if len(matches) == 0 {
-		m.Short = convert.S2Clear(spl[0])
+		m.Message = convert.S2Clear(spl[0])
 		m.CommitType = config.CommitChore
 	} else {
 		m.CommitType = matches[_titleRegexp.SubexpIndex("tpe")]
 		m.Scope = matches[_titleRegexp.SubexpIndex("scp")]
-		m.Short = matches[_titleRegexp.SubexpIndex("msg")]
+		m.Message = matches[_titleRegexp.SubexpIndex("msg")]
 
 		if matches[_titleRegexp.SubexpIndex("bre")] == "!" {
 			m.isBreakingChange = true
@@ -75,46 +81,11 @@ func NewCommitTpl(s, hash string) CommitTpl {
 				m.isBreakingChange = true
 			}
 
-			m.Body = append(m.Body, ll)
+			if showBody {
+				m.Body = append(m.Body, ll)
+			}
 		}
 	}
 
 	return m
-}
-
-// HashURL returns the commit hash URL.
-func hashURL(hash string) string {
-	ru := viper.GetString(config.RemoteURL)
-
-	if ru == "" {
-		return ""
-	}
-
-	u, err := url.JoinPath(ru, "commit", hash)
-	if err != nil {
-		return ""
-	}
-
-	return u
-}
-
-// IssueURL returns the issue URL.
-func issueURL(issue string) string {
-	ru := viper.GetString(config.ChangelogIssueURL)
-
-	if ru == "" {
-		return ""
-	}
-
-	u, err := url.JoinPath(ru, issue)
-	if err != nil {
-		return ""
-	}
-
-	return u
-}
-
-// ShortHash returns the short commit hash.
-func shortHash(hash string) string {
-	return hash[:7]
 }

@@ -10,12 +10,14 @@ import (
 	"github.com/klimby/version/pkg/version"
 )
 
-type nextType int
+type NextType int
 
 const (
-	nextMajor nextType = iota + 1
-	nextMinor
-	nextPatch
+	NextNone  NextType = iota
+	NextMajor NextType = iota
+	NextMinor
+	NextPatch
+	NextCustom
 )
 
 type Repository struct {
@@ -58,7 +60,7 @@ func (r Repository) GitRepo() *git.Repository {
 	return r.repo
 }
 
-/*func (r Repository) LastVersion() (version.V, error) {
+/*func (r Repository) LastVersion() (version.Version, error) {
 	lastTag, err := r.LastTag()
 	if err != nil {
 		return "", err
@@ -102,19 +104,11 @@ func (r Repository) RemoteURL() (string, error) {
 	return "", nil
 }
 
-func (r Repository) NextMajor() (version.V, bool, error) {
-	return r.nextVersion(nextMajor)
-}
+func (r Repository) NextVersion(nt NextType, custom version.V) (_ version.V, exists bool, _ error) {
+	if nt == NextNone {
+		return "", false, nil
+	}
 
-func (r Repository) NextMinor() (version.V, bool, error) {
-	return r.nextVersion(nextMinor)
-}
-
-func (r Repository) NextPatch() (version.V, bool, error) {
-	return r.nextVersion(nextPatch)
-}
-
-func (r Repository) nextVersion(nt nextType) (_ version.V, exists bool, _ error) {
 	lastTag, err := r.LastTag()
 	if err != nil {
 		return "", exists, err
@@ -126,17 +120,23 @@ func (r Repository) nextVersion(nt nextType) (_ version.V, exists bool, _ error)
 		last = last.Start()
 	}
 
+	var next version.V
+
 	switch nt {
-	case nextMajor:
-		last = last.NextMajor()
-	case nextMinor:
-		last = last.NextMinor()
-	case nextPatch:
-		last = last.NextPatch()
+	case NextMajor:
+		next = last.NextMajor()
+	case NextMinor:
+		next = last.NextMinor()
+	case NextPatch:
+		next = last.NextPatch()
+	case NextCustom:
+		next = custom
+	default:
+		return "", exists, fmt.Errorf("unknown next type")
 	}
 
 	for {
-		tag := last.GitVersion()
+		tag := next.GitVersion()
 
 		exists, err := r.tagExists(tag)
 		if err != nil {
@@ -148,10 +148,30 @@ func (r Repository) nextVersion(nt nextType) (_ version.V, exists bool, _ error)
 		}
 
 		exists = true
-		last = last.NextPatch()
+		next = next.NextPatch()
 	}
 
-	return last, exists, nil
+	return next, exists, nil
+}
+
+// CheckDowngrade checks if the version is not downgraded.
+func (r Repository) CheckDowngrade(v version.V) error {
+	lastTag, err := r.LastTag()
+	if err != nil {
+		return err
+	}
+
+	last := lastTag.Version()
+
+	if last.Empty() {
+		last = last.Start()
+	}
+
+	if last.Version().Compare(v) == -1 {
+		return fmt.Errorf("version downgrade: %s -> %s", last.Version().FormatString(), v.FormatString())
+	}
+
+	return nil
 }
 
 // CommitTag stores a tag.
@@ -174,7 +194,11 @@ func (r Repository) CommitTag(v version.V) (*Commit, error) {
 		return nil, fmt.Errorf("get commit object error: %s", err)
 	}
 
-	return &Commit{c: *obj}, nil
+	cmt := newCommitFromGit(*obj)
+
+	cmt.Version = v
+
+	return &cmt, nil
 }
 
 // Commits returns a commits from last tag to HEAD.
@@ -197,20 +221,22 @@ func (r Repository) Commits(v version.V) ([]Commit, error) {
 			break
 		}
 
-		setTagToCommit(c, tags)
+		cmt := newCommitFromGit(*c)
 
-		if !v.Empty() && v.Equal(version.V(c.MergeTag)) {
+		setTagToCommit(&cmt, tags)
+
+		if !v.Empty() && v.Equal(cmt.Version) {
 			break
 		}
 
-		cs = append(cs, Commit{c: *c})
+		cs = append(cs, cmt)
 	}
 
 	return cs, nil
 }
 
 // LastCommit returns a last commit.
-func (r Repository) LastCommit() (*object.Commit, error) {
+func (r Repository) LastCommit() (*Commit, error) {
 	tags, err := r.Tags()
 	if err != nil {
 		return nil, err
@@ -226,18 +252,20 @@ func (r Repository) LastCommit() (*object.Commit, error) {
 		return nil, err
 	}
 
-	setTagToCommit(c, tags)
+	cmt := newCommitFromGit(*c)
 
-	return c, nil
+	setTagToCommit(&cmt, tags)
+
+	return &cmt, nil
 }
 
-func setTagToCommit(c *object.Commit, tags []Tag) {
+func setTagToCommit(c *Commit, tags []Tag) {
 	for _, t := range tags {
-		if c.Hash == t.t.Target {
+		if c.Hash == t.t.Target.String() {
 			tagVer := t.Version()
 
 			if !tagVer.Invalid() {
-				c.MergeTag = tagVer.GitVersion()
+				c.Version = tagVer
 			}
 
 			break
@@ -308,32 +336,47 @@ func (r Repository) Tags() ([]Tag, error) {
 }
 
 type Commit struct {
-	c object.Commit
+	Hash    string
+	Message string
+	Author  string
+	Version version.V
+	Date    time.Time
+	Email   string
+}
+
+// newCommitFromGit returns a new Commit.
+func newCommitFromGit(c object.Commit) Commit {
+	return Commit{
+		Hash:    c.Hash.String(),
+		Message: c.Message,
+		Date:    c.Author.When,
+		Author:  c.Author.Name,
+		Email:   c.Author.Email,
+	}
 }
 
 // IsTag returns true if the commit is tagged.
 func (c Commit) IsTag() bool {
-	return !c.Version().Invalid()
+	return !c.Version.Invalid()
 }
 
-// Version returns a version of the commit.
-func (c Commit) Version() version.V {
-	return version.V(c.c.MergeTag)
-}
+// AuthorHref returns a commit Author href.
+func (c Commit) AuthorHref() string {
+	if c.Author == "" {
+		return ""
+	}
 
-// Message returns a commit message.
-func (c Commit) Message() string {
-	return c.c.Message
-}
+	// if Author start with @, then it is a GitHub username
+	// and return GitHub Author href
+	if c.Author[0] == '@' {
+		return "https://github.com/" + c.Author[1:]
+	}
 
-// Hash returns a commit hash.
-func (c Commit) Hash() string {
-	return c.c.Hash.String()
-}
+	if c.Email == "" {
+		return ""
+	}
 
-// Date returns a commit date.
-func (c Commit) Date() time.Time {
-	return c.c.Committer.When
+	return fmt.Sprintf("mailto:%s", c.Email)
 }
 
 type Tag struct {

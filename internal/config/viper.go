@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"regexp"
 
@@ -28,6 +29,8 @@ type ConfigOptions struct {
 	ChangelogFileName     string
 	ChangelogTitle        string
 	ChangelogIssueHref    string
+	ChangelogShowAuthor   bool
+	ChangelogShowBody     bool
 	Silent                bool
 	DryRun                bool
 	Backup                bool
@@ -47,6 +50,8 @@ func Init(opts ...func(options *ConfigOptions)) {
 		ChangelogFileName:     _ChangelogFileName,
 		ChangelogTitle:        _ChangelogTitle,
 		ConfigFile:            _ConfigFile,
+		ChangelogShowAuthor:   _ChangelogShowAuthor,
+		ChangelogShowBody:     _ChangelogShowBody,
 		// Silent:                false,
 		// DryRun:                false,
 		// Backup:                false,
@@ -69,6 +74,8 @@ func Init(opts ...func(options *ConfigOptions)) {
 	viper.Set(ChangelogFileName, co.ChangelogFileName)
 	viper.Set(ChangelogTitle, co.ChangelogTitle)
 	viper.Set(ChangelogIssueURL, co.ChangelogIssueHref)
+	viper.Set(ChangelogShowAuthor, co.ChangelogShowAuthor)
+	viper.Set(ChangelogShowBody, co.ChangelogShowBody)
 
 	viper.Set(ConfigFile, co.ConfigFile)
 
@@ -115,6 +122,19 @@ func SetFlags(opts ...func(options *FlagOptions)) {
 	}
 }
 
+// SetUrlFromGit sets the remote repository URL from git.
+func SetUrlFromGit(u string) {
+	if u != "" {
+		viper.Set(RemoteURL, u)
+		iU, err := url.JoinPath(u, "/issues/")
+		if err != nil {
+			return
+		}
+
+		viper.Set(ChangelogIssueURL, iU)
+	}
+}
+
 // Load loads the configuration from config.yaml.
 // Run after config.Init() in main.go.
 func Load(f file.Reader) (C, error) {
@@ -131,6 +151,8 @@ func Load(f file.Reader) (C, error) {
 		viper.Set(GenerateChangelog, c.ChangelogOptions.Generate)
 		viper.Set(ChangelogFileName, c.ChangelogOptions.FileName)
 		viper.Set(ChangelogTitle, c.ChangelogOptions.Title)
+		viper.Set(ChangelogShowAuthor, c.ChangelogOptions.ShowAuthor)
+		viper.Set(ChangelogShowBody, c.ChangelogOptions.ShowBody)
 
 		if c.Backup {
 			viper.Set(Backup, c.Backup)
