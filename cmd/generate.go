@@ -16,7 +16,7 @@ import (
 var generateCmd = &cobra.Command{
 	Use:           "generate",
 	Short:         "Generate files",
-	Long:          `Generate and rewrite config and changelog files.`,
+	Long:          fmt.Sprintf(`Generate and rewrite config and changelog files.`),
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -39,9 +39,6 @@ var generateCmd = &cobra.Command{
 		}
 
 		if !c && !changelog {
-
-			fmt.Println("DIR:" + viper.GetString(config.WorkDir))
-
 			if err := cmd.Help(); err != nil {
 				return err
 			}

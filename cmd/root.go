@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/klimby/version/internal/config"
@@ -14,18 +15,17 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "version",
 	Short: "CLI tool for versioning",
-	Long:  `CLI tool for versioning, generate changelog, bump version.`,
+	Long:  `CLI tool for versioning, generate changelog, bumping version.`,
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() error {
+	console.Notice(fmt.Sprintf("CLI tool for versioning Version v%s.", viper.GetString(config.Version)))
+	console.Notice("See https://github.com/klimby/version for more information.\n")
 	return rootCmd.Execute()
 }
 

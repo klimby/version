@@ -19,7 +19,7 @@ import (
 var nextCmd = &cobra.Command{
 	Use:           "next",
 	Short:         "Generate next version",
-	Long:          `Generate next version.`,
+	Long:          `Generate next version, bump files, generate changelog.`,
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	RunE: func(cmd *cobra.Command, args []string) error {

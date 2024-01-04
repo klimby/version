@@ -146,14 +146,14 @@ changelog:
 # - file: file patch
 #   start: number (optional)
 #   end: number (optional)
-#   regexp: regular expression for string search (optional)
+#   regexp: regular expression for string search (optional, array)
 # 
 # If file is composer.json or package.json, then regexp and start/end are ignored.
 #
 # Examples:
 # - file: README.md
 #   regexp: 
-#		- ^Version:.+$
+#	  - ^Version:.+$
 # 
 # All strings from file, that match regexp will be replaced with new version.
 #
@@ -165,13 +165,27 @@ changelog:
 #
 # - file: README.md
 #   regexp: 
-#		- ^Version:.+$
+#	  - ^Version:.+$
 #   start: 0
 #   end: 100
 #
 # All strings from file, from 0 to 100, that match regexp will be replaced with new version.
 #
-bump:	
+bump:
+  - file: package.json
+  - file: composer.json
+  - file: README.md
+    regexp:
+      - ^Version:.+$
+  - file: ./dir/file.txt
+    start: 0
+    end: 100
+  - file: ./dir/file2.txt
+    start: 0
+    end: 10
+    regexp:
+      - ^Version:.+$
+      - ^Ver:.+$
 
 ```
 
