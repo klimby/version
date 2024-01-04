@@ -34,8 +34,9 @@ type ConfigOptions struct {
 	Silent                bool
 	DryRun                bool
 	Backup                bool
+	Force                 bool
 	ConfigFile            string
-	ChangelogCommitNames  []CommitName
+	ChangelogCommitNames  []commitName
 }
 
 // Init initializes the configuration.
@@ -49,7 +50,7 @@ func Init(opts ...func(options *ConfigOptions)) {
 		GenerateChangelog:     _GenerateChangelog,
 		ChangelogFileName:     _ChangelogFileName,
 		ChangelogTitle:        _ChangelogTitle,
-		ConfigFile:            _ConfigFile,
+		ConfigFile:            DefaultConfigFile,
 		ChangelogShowAuthor:   _ChangelogShowAuthor,
 		ChangelogShowBody:     _ChangelogShowBody,
 		// Silent:                false,
@@ -62,7 +63,7 @@ func Init(opts ...func(options *ConfigOptions)) {
 		opt(co)
 	}
 
-	viper.Set(AppName, _AppName)
+	viper.Set(appName, _AppName)
 	viper.Set(Version, co.Version)
 	viper.Set(WorkDir, convert.EnvToString(WorkDir, co.WorkDir))
 
@@ -77,14 +78,28 @@ func Init(opts ...func(options *ConfigOptions)) {
 	viper.Set(ChangelogShowAuthor, co.ChangelogShowAuthor)
 	viper.Set(ChangelogShowBody, co.ChangelogShowBody)
 
-	viper.Set(ConfigFile, co.ConfigFile)
+	if co.ConfigFile != DefaultConfigFile {
+		viper.Set(CfgFile, co.ConfigFile)
+	}
 
-	viper.Set(Silent, co.Silent)
-	viper.Set(DryRun, co.DryRun)
-	viper.Set(Backup, co.Backup)
+	if co.Force {
+		viper.Set(Force, co.Force)
+		SetForce()
+	}
+
+	if co.Silent {
+		viper.Set(Silent, co.Silent)
+	}
+
+	if co.DryRun {
+		viper.Set(DryRun, co.DryRun)
+	}
+
+	if co.Backup {
+		viper.Set(Backup, co.Backup)
+	}
 
 	setCommitNames(co.ChangelogCommitNames)
-
 }
 
 type FlagOptions struct {
@@ -95,27 +110,8 @@ type FlagOptions struct {
 	ConfigFile string
 }
 
-// SetFlags sets the flags.
-// Run in main.go after Parse().
-func SetFlags(opts ...func(options *FlagOptions)) {
-	fo := &FlagOptions{
-		Silent:     false,
-		DryRun:     false,
-		Force:      false,
-		Backup:     false,
-		ConfigFile: _ConfigFile,
-	}
-
-	for _, opt := range opts {
-		opt(fo)
-	}
-
-	viper.Set(Silent, fo.Silent)
-	viper.Set(DryRun, fo.DryRun)
-	viper.Set(Backup, fo.Backup)
-	viper.Set(ConfigFile, fo.ConfigFile)
-
-	if fo.Force {
+func SetForce() {
+	if viper.GetBool(Force) {
 		viper.Set(AllowCommitDirty, true)
 		viper.Set(AutoGenerateNextPatch, true)
 		viper.Set(AllowDowngrades, true)
@@ -144,9 +140,17 @@ func Load(f file.Reader) (C, error) {
 	}
 
 	if c.IsFileConfig {
-		viper.Set(AllowCommitDirty, c.GitOptions.AllowCommitDirty)
-		viper.Set(AutoGenerateNextPatch, c.GitOptions.AutoGenerateNextPatch)
-		viper.Set(AllowDowngrades, c.GitOptions.AllowDowngrades)
+		if c.GitOptions.AllowCommitDirty {
+			viper.Set(AllowCommitDirty, c.GitOptions.AllowCommitDirty)
+		}
+
+		if c.GitOptions.AutoGenerateNextPatch {
+			viper.Set(AutoGenerateNextPatch, c.GitOptions.AutoGenerateNextPatch)
+		}
+
+		if c.GitOptions.AllowDowngrades {
+			viper.Set(AllowDowngrades, c.GitOptions.AllowDowngrades)
+		}
 
 		viper.Set(GenerateChangelog, c.ChangelogOptions.Generate)
 		viper.Set(ChangelogFileName, c.ChangelogOptions.FileName)
@@ -173,7 +177,7 @@ func Load(f file.Reader) (C, error) {
 
 // Check checks the configuration.
 // Run after config.Load() in main.go.
-func Check(c C) error {
+func Check(c C, needUpdateVersion version.V) error {
 	if !c.IsFileConfig {
 		return nil
 	}
@@ -205,20 +209,19 @@ func Check(c C) error {
 		}
 	}
 
-	appVersion := version.V(viper.GetString(Version))
-	if appVersion.Compare(c.Version) != 0 {
-		return fmt.Errorf(`%w: you use older version of config file. For update run "version --generate-config"`, ErrConfigWarn)
+	if !needUpdateVersion.Empty() && c.Version.LessThen(needUpdateVersion) {
+		return fmt.Errorf(`%w: you use older version of config file. For update run "version generate --config"`, ErrConfigWarn)
 	}
 
 	return nil
 }
 
-func setCommitNames(names []CommitName) {
+func setCommitNames(names []commitName) {
 	mp, order := toViperCommitNames(names)
-	viper.Set(ChangelogCommitTypes, mp)
-	viper.Set(ChangelogCommitOrder, order)
+	viper.Set(changelogCommitTypes, mp)
+	viper.Set(changelogCommitOrder, order)
 }
 
-func CommitNames() []CommitName {
-	return fromViperCommitNames(viper.GetStringMapString(ChangelogCommitTypes), viper.GetStringSlice(ChangelogCommitOrder))
+func CommitNames() []commitName {
+	return fromViperCommitNames(viper.GetStringMapString(changelogCommitTypes), viper.GetStringSlice(changelogCommitOrder))
 }

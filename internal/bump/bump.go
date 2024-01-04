@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Apply bumps files.
 func Apply(f file.ReadWriter, bumps []config.BumpFile, v version.V) {
 	for _, bmp := range bumps {
 		if err := backup.Create(f, bmp.File.Path()); err != nil {
@@ -27,6 +28,7 @@ func Apply(f file.ReadWriter, bumps []config.BumpFile, v version.V) {
 	}
 }
 
+// applyToFile bumps file.
 func applyToFile(f file.ReadWriter, bmp config.BumpFile, v version.V) error {
 
 	var content [][]byte
@@ -71,6 +73,7 @@ func applyToFile(f file.ReadWriter, bmp config.BumpFile, v version.V) error {
 	return nil
 }
 
+// bumpPredefinedJSON bumps predefined json file (package.json, composer.json).
 func bumpPredefinedJSON(f file.Reader, patch string, v version.V) (_ [][]byte, changed bool, err error) {
 	r, err := f.Read(patch)
 	if err != nil {
@@ -109,6 +112,7 @@ func bumpPredefinedJSON(f file.Reader, patch string, v version.V) (_ [][]byte, c
 	return content, changed, nil
 }
 
+// bumpCustomFile bumps custom file.
 func bumpCustomFile(f file.Reader, bmp config.BumpFile, v version.V) (_ [][]byte, changed bool, err error) {
 	r, err := f.Read(bmp.File.Path())
 	if err != nil {
@@ -181,6 +185,7 @@ func bumpCustomFile(f file.Reader, bmp config.BumpFile, v version.V) (_ [][]byte
 	return content, changed, nil
 }
 
+// write writes content to file.
 func write(f file.Writer, patch string, content [][]byte) (err error) {
 	w, err := f.Write(patch, os.O_WRONLY|os.O_TRUNC)
 	if err != nil {

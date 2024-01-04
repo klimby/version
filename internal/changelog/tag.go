@@ -16,15 +16,17 @@ import (
 	"github.com/spf13/viper"
 )
 
-type TagTpl struct {
+// tagTpl is a tag template.
+type tagTpl struct {
 	tag             version.V
 	prev            version.V
 	Date            string
 	BreakingChanges []commitTpl
-	Blocks          []TagTplBlock
+	Blocks          []tagTplBlock
 }
 
-type TagTplBlock struct {
+// tagTplBlock is a tag template block.
+type tagTplBlock struct {
 	// CommitType is a commit type (feat, fix, etc.).
 	CommitType string
 	// Name is a commit name.
@@ -33,20 +35,21 @@ type TagTplBlock struct {
 	Commits []commitTpl
 }
 
-func NewTagTpl(tag version.V, date time.Time) TagTpl {
+// newTagTpl returns a new tagTpl.
+func newTagTpl(tag version.V, date time.Time) tagTpl {
 	nms := config.CommitNames()
 
-	blocks := make([]TagTplBlock, len(nms))
+	blocks := make([]tagTplBlock, len(nms))
 
 	for i, nm := range nms {
-		blocks[i] = TagTplBlock{
+		blocks[i] = tagTplBlock{
 			CommitType: nm.Type,
 			Name:       nm.Name,
 			Commits:    []commitTpl{},
 		}
 	}
 
-	return TagTpl{
+	return tagTpl{
 		tag:             tag,
 		Date:            date.Format("2006-01-02"),
 		BreakingChanges: []commitTpl{},
@@ -55,12 +58,12 @@ func NewTagTpl(tag version.V, date time.Time) TagTpl {
 }
 
 // setPrev sets the previous tag.
-func (t *TagTpl) setPrev(prev version.V) {
+func (t *tagTpl) setPrev(prev version.V) {
 	t.prev = prev
 }
 
 // addCommit adds a commit to the tag.
-func (t *TagTpl) addCommit(c git.Commit) {
+func (t *tagTpl) addCommit(c git.Commit) {
 	if c.IsTag() {
 		return
 	}
@@ -81,7 +84,7 @@ func (t *TagTpl) addCommit(c git.Commit) {
 }
 
 // applyTemplate applies the template to the commit message.
-func (t *TagTpl) applyTemplate(wr io.Writer) error {
+func (t *tagTpl) applyTemplate(wr io.Writer) error {
 	funcMap := template.FuncMap{
 		"versionName": versionName(),
 		"commitName":  commitName(),
@@ -101,10 +104,10 @@ func (t *TagTpl) applyTemplate(wr io.Writer) error {
 }
 
 // versionName returns a version name string in template.
-func versionName() func(t TagTpl) string {
+func versionName() func(t tagTpl) string {
 	remoteURL := viper.GetString(config.RemoteURL)
 
-	return func(t TagTpl) string {
+	return func(t tagTpl) string {
 		if remoteURL == "" || t.tag.Invalid() || t.prev.Invalid() {
 			return t.tag.FormatString()
 		}
@@ -183,12 +186,14 @@ func addIssueURL() func(s string) string {
 	}
 }
 
-type TagsTpl struct {
-	Tags []TagTpl
+// tagsTpl is a list of tags template.
+type tagsTpl struct {
+	Tags []tagTpl
 }
 
-func NewTagsTpl(commits []git.Commit) (TagsTpl, error) {
-	var tags []TagTpl
+// newTagsTpl returns a new tagsTpl.
+func newTagsTpl(commits []git.Commit) (tagsTpl, error) {
+	var tags []tagTpl
 
 	for _, c := range commits {
 		if c.IsTag() {
@@ -196,7 +201,7 @@ func NewTagsTpl(commits []git.Commit) (TagsTpl, error) {
 				tags[len(tags)-1].setPrev(c.Version)
 			}
 
-			t := NewTagTpl(c.Version, c.Date)
+			t := newTagTpl(c.Version, c.Date)
 
 			tags = append(tags, t)
 
@@ -212,13 +217,13 @@ func NewTagsTpl(commits []git.Commit) (TagsTpl, error) {
 		tags[len(tags)-1].addCommit(c)
 	}
 
-	return TagsTpl{
+	return tagsTpl{
 		Tags: tags,
 	}, nil
 }
 
 // applyTemplate applies the template to the commit message.
-func (t TagsTpl) applyTemplate(wr io.Writer) error {
+func (t tagsTpl) applyTemplate(wr io.Writer) error {
 	for _, t := range t.Tags {
 		if err := t.applyTemplate(wr); err != nil {
 			return err

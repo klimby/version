@@ -207,6 +207,11 @@ func (v V) Compare(o V) int {
 	return comparePart(vBuildmetadata, oBuildmetadata)
 }
 
+// LessThen returns true if the version is less then the argument.
+func (v V) LessThen(o V) bool {
+	return v.Compare(o) == -1
+}
+
 // Version returns the version for interface compatibility.
 func (v V) Version() V {
 	return v

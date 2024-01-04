@@ -25,12 +25,14 @@ var (
 	errGenerate = fmt.Errorf("changelog generate error")
 )
 
+// Generator generates changelog.
 type Generator struct {
 	repo gitRepo
 	f    file.ReadWriter
 	path string
 }
 
+// gitRepo is git repository.
 type gitRepo interface {
 	// Commits returns commits.
 	// If nextV is set, then the tag with this version is not created yet and nextV - new created version.
@@ -39,6 +41,7 @@ type gitRepo interface {
 	Commits(nextV ...version.V) ([]git.Commit, error)
 }
 
+// NewGenerator creates new Generator.
 func NewGenerator(f file.ReadWriter, g gitRepo) *Generator {
 	n := config.File(viper.GetString(config.ChangelogFileName))
 	return &Generator{
@@ -48,6 +51,7 @@ func NewGenerator(f file.ReadWriter, g gitRepo) *Generator {
 	}
 }
 
+// Add adds new version to changelog.
 func (g Generator) Add(nextV version.V) (err error) {
 	if err := backup.Create(g.f, g.path); err != nil {
 		return err
@@ -156,6 +160,7 @@ func (g Generator) load(nextV version.V, wr io.Writer) (err error) {
 	return nil
 }
 
+// Generate generates changelog.
 func (g Generator) Generate() (err error) {
 	if err := backup.Create(g.f, g.path); err != nil {
 		return err
@@ -207,7 +212,7 @@ func (g Generator) applyTemplate(wr io.Writer, nextV ...version.V) error {
 		return err
 	}
 
-	tagsTpl, err := NewTagsTpl(c)
+	tagsTpl, err := newTagsTpl(c)
 	if err != nil {
 		return err
 	}

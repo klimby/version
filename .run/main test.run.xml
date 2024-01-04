@@ -1,0 +1,14 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="main test" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="version" />
+    <working_directory value="$PROJECT_DIR$" />
+    <envs>
+      <env name="WORK_DIR" value="$PROJECT_DIR$/../version-test" />
+    </envs>
+    <kind value="PACKAGE" />
+    <package value="github.com/klimby/version/cmd" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/cmd/main.go" />
+    <method v="2" />
+  </configuration>
+</component>

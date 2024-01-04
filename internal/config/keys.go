@@ -2,15 +2,14 @@ package config
 
 // Viper keys.
 const (
-	AppName = "appName"
+	appName = "appName"
 	Version = "version"
 	WorkDir = "WORK_DIR"
 
 	RemoteURL = "repoURL" // Remote repository URL.
 
-	ConfigFile = "configFile" // Configuration file name. Default: config.yaml.
+	CfgFile = "configFile" // Configuration file name. Default: config.yaml.
 
-	// If --force flag is set, then allowCommitDirty, autoGenerateNextPatch and allowDowngrades are set to true.
 	AllowCommitDirty      = "allowCommitDirty"      // Allow commit dirty repository. Default: false.
 	AutoGenerateNextPatch = "autoGenerateNextPatch" // Auto generate next patch version, if version exists. Default: false.
 	AllowDowngrades       = "allowDowngrades"       // Allow version downgrades. Default: false.
@@ -22,14 +21,16 @@ const (
 	ChangelogShowAuthor = "changelog.showAuthor" // Show author in changelog. Default: false.
 	ChangelogShowBody   = "changelog.showBody"   // Show body in changelog comment. Default: true.
 
-	ChangelogCommitTypes = "changelog.commitTypes" // Commit types for changelog. Map[string]string. Key - type key, value- type name.
-	ChangelogCommitOrder = "changelog.commitOrder" // Commit types order for changelog. []string. Default: empty.
+	changelogCommitTypes = "changelog.commitTypes" // Commit types for changelog. Map[string]string. Key - type key, value- type name.
+	changelogCommitOrder = "changelog.commitOrder" // Commit types order for changelog. []string. Default: empty.
 
 	Backup = "backupChanged" // Backup changed files. Default: false.
 	Silent = "silent"        // Silent mode from flags.
 	DryRun = "dryRun"        // Dry run mode from flags.
+	Force  = "force"         // Force mode from flags.
 )
 
+// Default values.
 const (
 	_AppName               = "Version"
 	_Version               = "0.0.0"
@@ -44,5 +45,5 @@ const (
 	_ChangelogShowAuthor = false
 	_ChangelogShowBody   = true
 
-	_ConfigFile = "config.yaml"
+	DefaultConfigFile = "version.yaml"
 )

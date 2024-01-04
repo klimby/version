@@ -14,6 +14,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// File is a file path.
 type File string
 
 // String returns the string representation of the file.
@@ -26,6 +27,7 @@ func (f File) Path() string {
 	return filepath.Join(viper.GetString(WorkDir), f.String())
 }
 
+// C is a configuration file.
 type C struct {
 	// Version is a version of the application.
 	Version version.V `yaml:"version"`
@@ -39,6 +41,87 @@ type C struct {
 	ChangelogOptions changelogOptions `yaml:"changelog"`
 	// Bump is a list of files for bump.
 	Bump []BumpFile `yaml:"bump"`
+}
+
+// newConfig returns a new configuration.
+func newConfig(f file.Reader) (_ C, err error) {
+	c := C{
+		Version: version.V(viper.GetString(Version)),
+		GitOptions: gitOptions{
+			AllowCommitDirty:      viper.GetBool(AllowCommitDirty),
+			AutoGenerateNextPatch: viper.GetBool(AutoGenerateNextPatch),
+			AllowDowngrades:       viper.GetBool(AllowDowngrades),
+			RemoteURL:             viper.GetString(RemoteURL),
+		},
+		ChangelogOptions: changelogOptions{
+			Generate:    viper.GetBool(GenerateChangelog),
+			FileName:    File(viper.GetString(ChangelogFileName)),
+			Title:       viper.GetString(ChangelogTitle),
+			IssueURL:    viper.GetString(ChangelogIssueURL),
+			ShowAuthor:  viper.GetBool(ChangelogShowAuthor),
+			ShowBody:    viper.GetBool(ChangelogShowBody),
+			CommitTypes: CommitNames(),
+		},
+	}
+
+	cfg := File(viper.GetString(CfgFile))
+	r, err := f.Read(cfg.Path())
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return c, nil
+		} else {
+			return c, fmt.Errorf("open config file error: %w", err)
+		}
+	}
+
+	defer func() {
+		if e := r.Close(); e != nil {
+			if err == nil {
+				err = fmt.Errorf("close config file error: %w", e)
+			}
+		}
+	}()
+
+	if err := yaml.NewDecoder(r).Decode(&c); err != nil {
+		return c, fmt.Errorf("decode config file error: %w", err)
+	}
+
+	c.IsFileConfig = true
+
+	return c, nil
+}
+
+// BumpFiles returns a list of files for bump.
+func (c C) BumpFiles() []BumpFile {
+	return c.Bump
+}
+
+// Generate generates the configuration file.
+func (c C) Generate(f file.Writer) error {
+	p := File(viper.GetString(CfgFile))
+	w, err := f.Write(p.Path(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC)
+	if err != nil {
+		return fmt.Errorf("open config file error: %w", err)
+	}
+
+	defer func() {
+		if e := w.Close(); e != nil {
+			if err == nil {
+				err = fmt.Errorf("close config file error: %w", e)
+			}
+		}
+	}()
+
+	tmpl, err := template.New("config").Parse(_configYamlTemplate)
+	if err != nil {
+		return fmt.Errorf("parse config template error: %w", err)
+	}
+
+	if err := tmpl.Execute(w, c); err != nil {
+		return fmt.Errorf("execute config template error: %w", err)
+	}
+
+	return nil
 }
 
 // gitOptions is a git options.
@@ -68,7 +151,7 @@ type changelogOptions struct {
 	// ShowBody is a flag that indicates that the body is shown in the changelog comment.
 	ShowBody bool `yaml:"showBody"`
 	// CommitTypes is a commit types for changelog.
-	CommitTypes []CommitName `yaml:"commitTypes"`
+	CommitTypes []commitName `yaml:"commitTypes"`
 }
 
 // BumpFile is a file for bump.
@@ -89,8 +172,8 @@ func (f BumpFile) HasPositions() bool {
 	return f.End != 0 && f.End >= f.Start
 }
 
-// HasRegExp returns true if the file has regexp.
-func (f BumpFile) HasRegExp() bool {
+// hasRegExp returns true if the file has regexp.
+func (f BumpFile) hasRegExp() bool {
 	return len(f.RegExp) > 0
 }
 
@@ -99,80 +182,4 @@ func (f BumpFile) HasRegExp() bool {
 func (f BumpFile) IsPredefinedJSON() bool {
 	n := filepath.Base(f.File.String())
 	return n == "composer.json" || n == "package.json"
-}
-
-// newConfig returns a new configuration.
-func newConfig(f file.Reader) (_ C, err error) {
-	c := C{
-		Version: version.V(viper.GetString(Version)),
-		GitOptions: gitOptions{
-			AllowCommitDirty:      viper.GetBool(AllowCommitDirty),
-			AutoGenerateNextPatch: viper.GetBool(AutoGenerateNextPatch),
-			AllowDowngrades:       viper.GetBool(AllowDowngrades),
-			RemoteURL:             viper.GetString(RemoteURL),
-		},
-		ChangelogOptions: changelogOptions{
-			Generate:    viper.GetBool(GenerateChangelog),
-			FileName:    File(viper.GetString(ChangelogFileName)),
-			Title:       viper.GetString(ChangelogTitle),
-			IssueURL:    viper.GetString(ChangelogIssueURL),
-			ShowAuthor:  viper.GetBool(ChangelogShowAuthor),
-			ShowBody:    viper.GetBool(ChangelogShowBody),
-			CommitTypes: CommitNames(),
-		},
-	}
-
-	cfg := File(viper.GetString(ConfigFile))
-	r, err := f.Read(cfg.Path())
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return c, nil
-		} else {
-			return c, fmt.Errorf("open config file error: %w", err)
-		}
-	}
-
-	defer func() {
-		if e := r.Close(); e != nil {
-			if err == nil {
-				err = fmt.Errorf("close config file error: %w", e)
-			}
-		}
-	}()
-
-	if err := yaml.NewDecoder(r).Decode(&c); err != nil {
-		return c, fmt.Errorf("decode config file error: %w", err)
-	}
-
-	c.IsFileConfig = true
-
-	return c, nil
-}
-
-// Generate generates the configuration file.
-func Generate(f file.Writer, cfg C) error {
-	p := File(viper.GetString(ConfigFile))
-	w, err := f.Write(p.Path(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC)
-	if err != nil {
-		return fmt.Errorf("open config file error: %w", err)
-	}
-
-	defer func() {
-		if e := w.Close(); e != nil {
-			if err == nil {
-				err = fmt.Errorf("close config file error: %w", e)
-			}
-		}
-	}()
-
-	tmpl, err := template.New("config").Parse(_configYamlTemplate)
-	if err != nil {
-		return fmt.Errorf("parse config template error: %w", err)
-	}
-
-	if err := tmpl.Execute(w, cfg); err != nil {
-		return fmt.Errorf("execute config template error: %w", err)
-	}
-
-	return nil
 }

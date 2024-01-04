@@ -21,4 +21,4 @@ help: ## Show this help
 
 .PHONY: build
 build: ## Build go files
-	go build  -ldflags "-s -w -X main.version=$(PACKAGE_VERSION)" -o ./bin/version github.com/klimby/version/cmd
+	go build  -ldflags "-s -w -X main.version=$(PACKAGE_VERSION)" -o ./bin/version github.com/klimby/version

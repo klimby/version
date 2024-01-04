@@ -23,7 +23,7 @@ func TestDebug(t *testing.T) {
 	viper.Set(config.ChangelogIssueURL, "https://github.om/company/project/issues/")
 	viper.Set(config.ChangelogShowAuthor, true)
 
-	tagTpl := NewTagTpl(version.V("1.0.0"), time.Now())
+	tagTpl := newTagTpl(version.V("1.0.0"), time.Now())
 	tagTpl.prev = version.V("0.0.1")
 
 	breackComm := __newFakeCommit(func(c *git.Commit) {
@@ -62,7 +62,7 @@ long message 02 #123`
 		t.Error(err)
 	}
 
-	tagTpl2 := NewTagTpl(version.V("0.9.0"), time.Now())
+	tagTpl2 := newTagTpl(version.V("0.9.0"), time.Now())
 	tagTpl2.prev = version.V("0.0.1")
 
 	/*if err := tagTpl2.applyTemplate(MarkdownTpl, &b); err != nil {
