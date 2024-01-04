@@ -82,7 +82,7 @@ func main() {
 	flagSet.BoolVarP(&dryRun, "dry", "d", false, "Dry run")
 	flagSet.BoolVarP(&silent, "silent", "s", false, "Silent mode")
 	flagSet.BoolVarP(&force, "force", "f", false, "Force mode")
-	flagSet.BoolVarP(&backupFiles, "backup", "b", true, "Backup changed files")
+	flagSet.BoolVarP(&backupFiles, "backup", "b", false, "Backup changed files")
 
 	flagSet.BoolVar(&removeBackup, "remove-backup", false, "Remove backup files")
 	flagSet.BoolVar(&generateConfig, "generate-config", false, "Generate or update config file")

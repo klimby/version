@@ -32,8 +32,11 @@ type Generator struct {
 }
 
 type gitRepo interface {
-	LastCommit() (*git.Commit, error)
-	Commits(v version.V) ([]git.Commit, error)
+	// Commits returns commits.
+	// If nextV is set, then the tag with this version is not created yet and nextV - new created version.
+	// In this case will ber returned commits from last tag to HEAD and last commit will be with nextV.
+	// If nextV is not set, then will be returned all commits.
+	Commits(nextV ...version.V) ([]git.Commit, error)
 }
 
 func NewGenerator(f file.ReadWriter, g gitRepo) *Generator {
@@ -45,14 +48,14 @@ func NewGenerator(f file.ReadWriter, g gitRepo) *Generator {
 	}
 }
 
-func (g Generator) Add(from version.V) (err error) {
+func (g Generator) Add(nextV version.V) (err error) {
 	if err := backup.Create(g.f, g.path); err != nil {
 		return err
 	}
 
 	var b strings.Builder
 
-	if err := g.load(from, &b); err != nil {
+	if err := g.load(nextV, &b); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return g.Generate()
 		}
@@ -85,7 +88,7 @@ func (g Generator) Add(from version.V) (err error) {
 }
 
 // load changes file.
-func (g Generator) load(from version.V, wr io.Writer) (err error) {
+func (g Generator) load(nextV version.V, wr io.Writer) (err error) {
 	src, err := g.f.Read(g.path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -105,7 +108,7 @@ func (g Generator) load(from version.V, wr io.Writer) (err error) {
 
 	var b strings.Builder
 
-	if err := g.applyTemplate(from, &b); err != nil {
+	if err := g.applyTemplate(&b, nextV); err != nil {
 		return err
 	}
 
@@ -162,9 +165,9 @@ func (g Generator) Generate() (err error) {
 	b.WriteString("# " + viper.GetString(config.ChangelogTitle) + "\n\n")
 
 	b.WriteString("All notable changes to this project will be documented in this file. ")
-	b.WriteString("See [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for commit guidelines.\n")
+	b.WriteString("See [Conventional CommitsFromLast](https://www.conventionalcommits.org/en/v1.0.0/) for commit guidelines.\n")
 
-	if err := g.applyTemplate("", &b); err != nil {
+	if err := g.applyTemplate(&b); err != nil {
 		return err
 	}
 
@@ -198,8 +201,8 @@ func (g Generator) Generate() (err error) {
 }
 
 // applyTemplate applies template to writer.
-func (g Generator) applyTemplate(from version.V, wr io.Writer) error {
-	c, err := g.repo.Commits(from)
+func (g Generator) applyTemplate(wr io.Writer, nextV ...version.V) error {
+	c, err := g.repo.Commits(nextV...)
 	if err != nil {
 		return err
 	}

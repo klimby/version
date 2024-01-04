@@ -29,11 +29,12 @@ type actRepo interface {
 	IsClean() (bool, error)
 	NextVersion(nt git.NextType, custom version.V) (version.V, bool, error)
 	CheckDowngrade(v version.V) error
+	CommitTag(v version.V) (*git.Commit, error)
 }
 
 type changelogGenerator interface {
 	Generate() error
-	Add(from version.V) error
+	Add(nextV version.V) error
 }
 
 type Args struct {
@@ -106,6 +107,18 @@ func (a *A) NextVersion(nt git.NextType, custom version.V) error {
 	}
 
 	bump.Apply(a.f, a.cfg.Bump, nextV)
+
+	if err := a.writeChangelog(nextV); err != nil {
+		return err
+	}
+
+	if viper.GetBool(config.DryRun) {
+		return nil
+	}
+
+	if _, err := a.repo.CommitTag(nextV); err != nil {
+		return err
+	}
 
 	return nil
 }

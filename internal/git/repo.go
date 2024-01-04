@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/klimby/version/pkg/version"
 )
@@ -201,8 +202,16 @@ func (r Repository) CommitTag(v version.V) (*Commit, error) {
 	return &cmt, nil
 }
 
-// Commits returns a commits from last tag to HEAD.
-func (r Repository) Commits(v version.V) ([]Commit, error) {
+// Commits returns commits.
+// If nextV is set, then the tag with this version is not created yet and nextV - new created version.
+// In this case will ber returned commits from last tag to HEAD and last commit will be with nextV.
+// If nextV is not set, then will be returned all commits.
+func (r Repository) Commits(nextV ...version.V) ([]Commit, error) {
+	onlyLast := len(nextV) > 0
+	if onlyLast && nextV[0].Empty() {
+			return nil, fmt.Errorf("empty next version")
+	}
+
 	tags, err := r.Tags()
 	if err != nil {
 		return nil, err
@@ -213,7 +222,21 @@ func (r Repository) Commits(v version.V) ([]Commit, error) {
 		return nil, err
 	}
 
+	defer commits.Close()
+
 	var cs []Commit
+
+	if onlyLast {
+		lastCommit := Commit{
+			Hash: plumbing.ZeroHash.String(),
+			Message: fmt.Sprintf("chore(release): %s", nextV[0].FormatString()),
+			Version: nextV[0],
+			Date: time.Now(),
+		}
+
+		cs = make([]Commit, 0, 1)
+		cs = append(cs, lastCommit)
+	}
 
 	for {
 		c, err := commits.Next()
@@ -225,7 +248,7 @@ func (r Repository) Commits(v version.V) ([]Commit, error) {
 
 		setTagToCommit(&cmt, tags)
 
-		if !v.Empty() && v.Equal(cmt.Version) {
+		if onlyLast && cmt.IsTag() {
 			break
 		}
 

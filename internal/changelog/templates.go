@@ -15,10 +15,10 @@ const _tagMarkdownTpl = `
 {{- end -}}
 
 {{- range .Blocks}}
-{{- if .Commits }}
+{{- if .CommitsFromLast }}
 
 ### {{ .Name }}
-{{ range .Commits}}
+{{ range .CommitsFromLast}}
 * {{ commitName . }}
 {{- range .Body}}
     * {{addIssueURL .}}
