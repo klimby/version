@@ -80,7 +80,17 @@ func (r Repository) IsClean() (bool, error) {
 		return false, fmt.Errorf("get status error: %w", err)
 	}
 
-	return st.IsClean(), nil
+	if len(st) == 0 {
+		return true, nil
+	}
+
+	for _, s := range st {
+		if s.Staging == git.Modified || s.Worktree == git.Modified {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 // RemoteURL returns a repository name.

@@ -34,7 +34,7 @@ changelog:
 	# 	- IssueURL: https://company.atlassian.net/jira/software/projects/PROJECT/issues/
 	# 	- IssueURL: https://github.com/company/project/issues/
 	# If empty, ang repository is CitHub, then issueHref will be set from remote repository URL.
-	issueUrl: "{{ .ChangelogOptions.IssueURL }}"
+	issueUrl: {{ .ChangelogOptions.IssueURL }}
 	# Show author in changelog.
 	showAuthor: {{ .ChangelogOptions.ShowAuthor }}
 	# Show body in changelog comment.
