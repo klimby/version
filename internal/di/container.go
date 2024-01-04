@@ -12,13 +12,14 @@ import (
 	"github.com/spf13/viper"
 )
 
-var C = &Container{}
+// C is the DI container.
+var C = &container{}
 
-// Container - DI container.
+// container - DI container.
 // Properties are singleton objects.
-type Container struct {
-	// isInit is true if the container is initialized.
-	isInit bool
+type container struct {
+	// IsInit is true if the container is initialized.
+	IsInit bool
 
 	// repo object singleton.
 	repo *git.Repository
@@ -33,11 +34,11 @@ type Container struct {
 }
 
 // Init initializes the container.
-func (c *Container) Init(needUpdateVersion version.V) error {
-	if c.isInit {
-		panic("container is already initialized")
+func (c *container) Init(needUpdateVersion version.V) error {
+	if c.IsInit {
+		return errors.New("container is already initialized")
 	}
-	c.isInit = true
+	c.IsInit = true
 
 	c.f = file.NewFS()
 
@@ -78,37 +79,21 @@ func (c *Container) Init(needUpdateVersion version.V) error {
 }
 
 // Repo returns the repo object.
-func (c *Container) Repo() *git.Repository {
-	if !c.isInit {
-		panic("container is not initialized")
-	}
-
+func (c *container) Repo() *git.Repository {
 	return c.repo
 }
 
 // Changelog returns the changelog object.
-func (c *Container) Changelog() *changelog.Generator {
-	if !c.isInit {
-		panic("container is not initialized")
-	}
-
+func (c *container) Changelog() *changelog.Generator {
 	return c.ch
 }
 
 // Config returns the config object.
-func (c *Container) Config() *config.C {
-	if !c.isInit {
-		panic("container is not initialized")
-	}
-
+func (c *container) Config() *config.C {
 	return c.cfg
 }
 
 // FS returns the file system object.
-func (c *Container) FS() *file.FS {
-	if !c.isInit {
-		panic("container is not initialized")
-	}
-
+func (c *container) FS() *file.FS {
 	return c.f
 }

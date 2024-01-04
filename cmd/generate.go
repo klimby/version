@@ -48,6 +48,7 @@ var generateCmd = &cobra.Command{
 	},
 }
 
+// init - init generate command.
 func init() {
 	generateCmd.Flags().Bool("config-file", false, "generate config file")
 	generateCmd.Flags().Bool("changelog", false, "generate changelog file")
@@ -55,15 +56,18 @@ func init() {
 	rootCmd.AddCommand(generateCmd)
 }
 
+// generateConfigArgs - arguments for generateConfig.
 type generateConfigArgs struct {
 	f file.ReadWriter
 	c generateConfigArgsConfig
 }
 
+// generateConfigArgsConfig - config interface for generateConfig.
 type generateConfigArgsConfig interface {
 	Generate(file.Writer) error
 }
 
+// generateConfig generates config file.
 func generateConfig(opts ...func(options *generateConfigArgs)) error {
 	a := &generateConfigArgs{
 		f: di.C.FS(),
@@ -91,14 +95,17 @@ func generateConfig(opts ...func(options *generateConfigArgs)) error {
 	return nil
 }
 
+// generateChangelogArgs - arguments for generateChangelog.
 type generateChangelogArgs struct {
 	chGen generateChangelogArgsChGen
 }
 
+// generateChangelogArgsChGen - changelog interface for generateChangelog.
 type generateChangelogArgsChGen interface {
 	Generate() error
 }
 
+// generateChangelog generates changelog file.
 func generateChangelog(opts ...func(options *generateChangelogArgs)) error {
 	a := &generateChangelogArgs{
 		chGen: di.C.Changelog(),

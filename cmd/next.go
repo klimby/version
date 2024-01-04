@@ -83,6 +83,7 @@ var nextCmd = &cobra.Command{
 	},
 }
 
+// init - init next command.
 func init() {
 	nextCmd.Flags().Bool("major", false, "next major version")
 	nextCmd.Flags().Bool("minor", false, "next minor version")
@@ -111,6 +112,7 @@ func init() {
 	rootCmd.AddCommand(nextCmd)
 }
 
+// nextArgs - arguments for next.
 type nextArgs struct {
 	nt     git.NextType
 	custom version.V
@@ -120,6 +122,7 @@ type nextArgs struct {
 	f      file.ReadWriter
 }
 
+// nextArgsRepo - repo interface for nextArgs.
 type nextArgsRepo interface {
 	IsClean() (bool, error)
 	NextVersion(nt git.NextType, custom version.V) (version.V, bool, error)
@@ -127,14 +130,17 @@ type nextArgsRepo interface {
 	CommitTag(v version.V) (*git.Commit, error)
 }
 
+// nextArgsChGen - changelog interface for nextArgs.
 type nextArgsChGen interface {
 	Add(v version.V) error
 }
 
+// nextArgsConfig - config interface for nextArgs.
 type nextArgsConfig interface {
 	BumpFiles() []config.BumpFile
 }
 
+// next - generate next version.
 func next(opts ...func(options *nextArgs)) error {
 	a := &nextArgs{
 		nt:     git.NextNone,
@@ -181,6 +187,7 @@ func next(opts ...func(options *nextArgs)) error {
 	return nil
 }
 
+// checkClean checks if the repository is clean.
 func checkClean(repo nextArgsRepo) error {
 	clean, err := repo.IsClean()
 	if err != nil {
@@ -198,6 +205,7 @@ func checkClean(repo nextArgsRepo) error {
 	return nil
 }
 
+// nextVersion returns the next version.
 func nextVersion(repo nextArgsRepo, nt git.NextType, custom version.V) (version.V, error) {
 	nextV, exists, err := repo.NextVersion(nt, custom)
 	if err != nil {

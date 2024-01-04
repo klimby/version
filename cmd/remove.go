@@ -37,20 +37,24 @@ var removeCmd = &cobra.Command{
 	},
 }
 
+// init - init remove command.
 func init() {
 	removeCmd.Flags().Bool("backup", false, "remove backup files")
 	rootCmd.AddCommand(removeCmd)
 }
 
+// removeArgs - arguments for removeBackup.
 type removeArgs struct {
 	f   file.Remover
 	cfg removeArgsConfig
 }
 
+// removeArgsConfig - config interface for removeArgs.
 type removeArgsConfig interface {
 	BumpFiles() []config.BumpFile
 }
 
+// removeBackup removes backup files.
 func removeBackup(opts ...func(options *removeArgs)) error {
 	a := &removeArgs{
 		f:   di.C.FS(),

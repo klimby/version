@@ -9,3 +9,4 @@ go.work
 notes.md
 
 /.run
+/debug

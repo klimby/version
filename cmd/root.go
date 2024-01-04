@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -19,6 +20,13 @@ var rootCmd = &cobra.Command{
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if !di.C.IsInit {
+			return errors.New("container is not initialized")
+		}
+
+		return nil
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -26,6 +34,7 @@ var rootCmd = &cobra.Command{
 func Execute() error {
 	console.Notice(fmt.Sprintf("CLI tool for versioning Version v%s.", viper.GetString(config.Version)))
 	console.Notice("See https://github.com/klimby/version for more information.\n")
+
 	return rootCmd.Execute()
 }
 
