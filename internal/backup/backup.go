@@ -66,7 +66,6 @@ func Create(f file.ReadWriter, path string) (err error) {
 
 // Remove backup of file.
 func Remove(f file.Remover, path ...string) {
-
 	for _, p := range path {
 		backPath := p + _suffix
 

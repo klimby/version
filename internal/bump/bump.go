@@ -30,7 +30,6 @@ func Apply(f file.ReadWriter, bumps []config.BumpFile, v version.V) {
 
 // applyToFile bumps file.
 func applyToFile(f file.ReadWriter, bmp config.BumpFile, v version.V) error {
-
 	var content [][]byte
 	changed := false
 

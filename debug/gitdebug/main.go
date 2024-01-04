@@ -14,7 +14,7 @@ import (
 func main() {
 	p := filepath.Join("/home", "klim", "Projects", "version-test")
 
-	config.Init(func(options *config.ConfigOptions) {
+	config.Init(func(options *config.Options) {
 		options.WorkDir = p
 		options.ChangelogFileName = "CHANGELOG_2.md"
 		//	options.DryRun = true
@@ -32,9 +32,17 @@ func main() {
 	f := file.NewFS()
 
 	remote, _ := repo.RemoteURL()
-	config.SetUrlFromGit(remote)
+	config.SetURLFromGit(remote)
 
 	gen := changelog.NewGenerator(f, repo)
+	_ = gen
+
+	_, err = repo.Commits("0.0.9")
+	if err != nil {
+		fmt.Println(err)
+
+		return
+	}
 
 	/*if err := gen.Add(version.V("0.0.3")); err != nil {
 		fmt.Println(err)
@@ -42,11 +50,11 @@ func main() {
 		return
 	}*/
 
-	if err := gen.Generate(); err != nil {
+	/*if err := gen.Generate(); err != nil {
 		fmt.Println(err)
 
 		return
-	}
+	}*/
 
 	//	repo := r.GitRepo()
 

@@ -1,7 +1,9 @@
 package git
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"regexp"
 	"time"
 
@@ -23,6 +25,10 @@ const (
 	NextMinor                  // NextMinor is a next version type minor.
 	NextPatch                  // NextPatch is a next version type patch.
 	NextCustom                 // NextCustom is a next version type custom (need to set custom version).
+)
+
+var (
+	errTagsNotFound = errors.New("tags not found")
 )
 
 // Repository is a git repository wrapper.
@@ -66,12 +72,12 @@ func NewRepository(opts ...func(options *RepoOptions)) (*Repository, error) {
 func (r Repository) IsClean() (bool, error) {
 	w, err := r.repo.Worktree()
 	if err != nil {
-		return false, fmt.Errorf("get worktree error: %s", err)
+		return false, fmt.Errorf("get worktree error: %w", err)
 	}
 
 	st, err := w.Status()
 	if err != nil {
-		return false, fmt.Errorf("get status error: %s", err)
+		return false, fmt.Errorf("get status error: %w", err)
 	}
 
 	return st.IsClean(), nil
@@ -81,10 +87,10 @@ func (r Repository) IsClean() (bool, error) {
 func (r Repository) RemoteURL() (string, error) {
 	rem, err := r.repo.Remotes()
 	if err != nil {
-		return "", fmt.Errorf("get remotes error: %s", err)
+		return "", fmt.Errorf("get remotes error: %w", err)
 	}
 
-	reg := regexp.MustCompile(`^.+(github.com.+).git$`)
+	reg := regexp.MustCompile(`^.+(github\.com.+).git$`)
 
 	for _, rm := range rem {
 		matches := reg.FindStringSubmatch(rm.Config().URLs[0])
@@ -103,30 +109,36 @@ func (r Repository) NextVersion(nt NextType, custom version.V) (_ version.V, exi
 		return "", false, nil
 	}
 
+	var lastV version.V
+
 	lastTag, err := r.lastTag()
 	if err != nil {
-		return "", exists, err
+		if !errors.Is(err, errTagsNotFound) {
+			return "", false, err
+		}
+
+		lastV = lastV.Start()
+	} else {
+		lastV = lastTag.Version()
 	}
 
-	last := lastTag.Version()
-
-	if last.Empty() {
-		last = last.Start()
+	if lastV.Empty() {
+		lastV = lastV.Start()
 	}
 
 	var next version.V
 
 	switch nt {
 	case NextMajor:
-		next = last.NextMajor()
+		next = lastV.NextMajor()
 	case NextMinor:
-		next = last.NextMinor()
+		next = lastV.NextMinor()
 	case NextPatch:
-		next = last.NextPatch()
+		next = lastV.NextPatch()
 	case NextCustom:
 		next = custom
-	default:
-		return "", exists, fmt.Errorf("unknown next type")
+	case NextNone:
+		return "", false, fmt.Errorf("unknown next type")
 	}
 
 	for {
@@ -141,7 +153,6 @@ func (r Repository) NextVersion(nt NextType, custom version.V) (_ version.V, exi
 			break
 		}
 
-		exists = true
 		next = next.NextPatch()
 	}
 
@@ -152,6 +163,10 @@ func (r Repository) NextVersion(nt NextType, custom version.V) (_ version.V, exi
 func (r Repository) CheckDowngrade(v version.V) error {
 	lastTag, err := r.lastTag()
 	if err != nil {
+		if errors.Is(err, errTagsNotFound) {
+			return nil
+		}
+
 		return err
 	}
 
@@ -172,20 +187,23 @@ func (r Repository) CheckDowngrade(v version.V) error {
 func (r Repository) CommitTag(v version.V) (*Commit, error) {
 	w, err := r.repo.Worktree()
 	if err != nil {
-		return nil, fmt.Errorf("get worktree error: %s", err)
+		return nil, fmt.Errorf("get worktree error: %w", err)
 	}
 
 	commit, err := w.Commit(fmt.Sprintf("chore(release): %s", v.FormatString()), &git.CommitOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("commit error: %w", err)
+	}
 
 	if _, err = r.repo.CreateTag(v.GitVersion(), commit, &git.CreateTagOptions{
 		Message: fmt.Sprintf("chore(release): %s", v.FormatString()),
 	}); err != nil {
-		return nil, fmt.Errorf("create tag error: %s", err)
+		return nil, fmt.Errorf("create tag error: %w", err)
 	}
 
 	obj, err := r.repo.CommitObject(commit)
 	if err != nil {
-		return nil, fmt.Errorf("get commit object error: %s", err)
+		return nil, fmt.Errorf("get commit object error: %w", err)
 	}
 
 	cmt := newCommitFromGit(*obj)
@@ -234,7 +252,11 @@ func (r Repository) Commits(nextV ...version.V) ([]Commit, error) {
 	for {
 		c, err := commits.Next()
 		if err != nil {
-			break
+			if errors.Is(err, io.EOF) {
+				break
+			}
+
+			return nil, err
 		}
 
 		cmt := newCommitFromGit(*c)
@@ -253,9 +275,9 @@ func (r Repository) Commits(nextV ...version.V) ([]Commit, error) {
 
 // setTagToCommit sets a tag to commit.
 func setTagToCommit(c *Commit, tags []tag) {
-	for _, t := range tags {
-		if c.Hash == t.t.Target.String() {
-			tagVer := t.Version()
+	for i := range tags {
+		if c.Hash == tags[i].t.Target.String() {
+			tagVer := tags[i].Version()
 
 			if !tagVer.Invalid() {
 				c.Version = tagVer
@@ -273,11 +295,18 @@ func (r Repository) tagExists(tag string) (bool, error) {
 		return false, err
 	}
 
+	defer tags.Close()
+
 	for {
 		t, err := tags.Next()
 		if err != nil {
-			break
+			if errors.Is(err, io.EOF) {
+				break
+			}
+
+			return false, err
 		}
+
 		if t.Name == tag {
 			return true, nil
 		}
@@ -294,7 +323,7 @@ func (r Repository) lastTag() (*tag, error) {
 	}
 
 	if len(tags) == 0 {
-		return nil, nil
+		return nil, errTagsNotFound
 	}
 
 	return &tags[len(tags)-1], nil
@@ -307,13 +336,20 @@ func (r Repository) tags() ([]tag, error) {
 		return nil, err
 	}
 
+	defer tagRefs.Close()
+
 	var tags []tag
 
 	for {
 		tagRef, err := tagRefs.Next()
 		if err != nil {
-			break
+			if errors.Is(err, io.EOF) {
+				break
+			}
+
+			return nil, err
 		}
+
 		if tagRef == nil {
 			break
 		}

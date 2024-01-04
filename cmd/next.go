@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// nextCmd represents the next command
+// nextCmd represents the next command.
 var nextCmd = &cobra.Command{
 	Use:           "next",
 	Short:         "Generate next version",
@@ -23,8 +23,6 @@ var nextCmd = &cobra.Command{
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("next called")
-
 		major, err := cmd.Flags().GetBool("major")
 		if err != nil {
 			return err
@@ -86,22 +84,26 @@ var nextCmd = &cobra.Command{
 }
 
 func init() {
-	nextCmd.Flags().Bool("major", false, "Next major version")
-	nextCmd.Flags().Bool("minor", false, "Next minor version")
-	nextCmd.Flags().Bool("patch", false, "Next patch version")
-	nextCmd.Flags().String("ver", "", "Next build version in format 1.2.3")
+	nextCmd.Flags().Bool("major", false, "next major version")
+	nextCmd.Flags().Bool("minor", false, "next minor version")
+	nextCmd.Flags().Bool("patch", false, "next patch version")
+	nextCmd.Flags().String("ver", "", "next build version in format 1.2.3")
 	nextCmd.MarkFlagsMutuallyExclusive("major", "minor", "patch", "ver")
 
 	rootCmd.PersistentFlags().BoolP("backup", "b", false, "backup changed files")
+
 	if err := viper.BindPFlag(config.Backup, rootCmd.PersistentFlags().Lookup("backup")); err != nil {
 		viper.Set(config.Backup, false)
 	}
+
 	viper.SetDefault(config.Backup, false)
 
 	rootCmd.PersistentFlags().BoolP("force", "f", false, "force mode")
+
 	if err := viper.BindPFlag(config.Force, rootCmd.PersistentFlags().Lookup("force")); err != nil {
 		viper.Set(config.Force, false)
 	}
+
 	viper.SetDefault(config.Force, false)
 
 	config.SetForce()
@@ -232,9 +234,5 @@ func writeChangelog(g nextArgsChGen, v version.V) error {
 		return nil
 	}
 
-	if err := g.Add(v); err != nil {
-		return err
-	}
-
-	return nil
+	return g.Add(v)
 }

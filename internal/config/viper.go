@@ -8,7 +8,6 @@ import (
 	"regexp"
 
 	"github.com/klimby/version/internal/file"
-	"github.com/klimby/version/pkg/convert"
 	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/viper"
 )
@@ -18,8 +17,8 @@ var (
 	ErrConfigWarn = errors.New("config warning")
 )
 
-// ConfigOptions is a configuration options.
-type ConfigOptions struct {
+// Options is a configuration options.
+type Options struct {
 	WorkDir               string
 	Version               string
 	AllowCommitDirty      bool
@@ -36,13 +35,13 @@ type ConfigOptions struct {
 	Backup                bool
 	Force                 bool
 	ConfigFile            string
-	ChangelogCommitNames  []commitName
+	ChangelogCommitNames  []CommitName
 }
 
 // Init initializes the configuration.
-func Init(opts ...func(options *ConfigOptions)) {
-	co := &ConfigOptions{
-		WorkDir:               _WorkDir,
+func Init(opts ...func(options *Options)) {
+	co := &Options{
+		// WorkDir:               _WorkDir,
 		Version:               _Version,
 		AllowCommitDirty:      _AllowCommitDirty,
 		AutoGenerateNextPatch: _AutoGenerateNextPatch,
@@ -65,7 +64,10 @@ func Init(opts ...func(options *ConfigOptions)) {
 
 	viper.Set(appName, _AppName)
 	viper.Set(Version, co.Version)
-	viper.Set(WorkDir, convert.EnvToString(WorkDir, co.WorkDir))
+
+	if co.WorkDir != "" {
+		viper.Set(WorkDir, co.WorkDir)
+	}
 
 	viper.Set(AllowCommitDirty, co.AllowCommitDirty)
 	viper.Set(AutoGenerateNextPatch, co.AutoGenerateNextPatch)
@@ -102,14 +104,6 @@ func Init(opts ...func(options *ConfigOptions)) {
 	setCommitNames(co.ChangelogCommitNames)
 }
 
-type FlagOptions struct {
-	Silent     bool
-	DryRun     bool
-	Force      bool
-	Backup     bool
-	ConfigFile string
-}
-
 func SetForce() {
 	if viper.GetBool(Force) {
 		viper.Set(AllowCommitDirty, true)
@@ -118,10 +112,11 @@ func SetForce() {
 	}
 }
 
-// SetUrlFromGit sets the remote repository URL from git.
-func SetUrlFromGit(u string) {
+// SetURLFromGit sets the remote repository URL from git.
+func SetURLFromGit(u string) {
 	if u != "" {
 		viper.Set(RemoteURL, u)
+
 		iU, err := url.JoinPath(u, "/issues/")
 		if err != nil {
 			return
@@ -169,7 +164,6 @@ func Load(f file.Reader) (C, error) {
 		if c.GitOptions.RemoteURL != "" {
 			viper.Set(RemoteURL, c.GitOptions.RemoteURL)
 		}
-
 	}
 
 	return c, nil
@@ -187,9 +181,9 @@ func Check(c C, needUpdateVersion version.V) error {
 		if _, err := os.Stat(f.File.Path()); err != nil {
 			if os.IsNotExist(err) {
 				return fmt.Errorf(`%w: file %s does not exist`, errConfig, f.File)
-			} else {
-				return fmt.Errorf(`%w: file %s error: %v`, errConfig, f.File, err)
 			}
+
+			return fmt.Errorf(`%w: file %s error: %w`, errConfig, f.File, err)
 		}
 
 		if f.IsPredefinedJSON() {
@@ -216,12 +210,13 @@ func Check(c C, needUpdateVersion version.V) error {
 	return nil
 }
 
-func setCommitNames(names []commitName) {
+func setCommitNames(names []CommitName) {
 	mp, order := toViperCommitNames(names)
 	viper.Set(changelogCommitTypes, mp)
 	viper.Set(changelogCommitOrder, order)
 }
 
-func CommitNames() []commitName {
+// CommitNames returns a list of commit names.
+func CommitNames() []CommitName {
 	return fromViperCommitNames(viper.GetStringMapString(changelogCommitTypes), viper.GetStringSlice(changelogCommitOrder))
 }

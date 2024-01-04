@@ -55,7 +55,7 @@ func (c *Container) Init(needUpdateVersion version.V) error {
 		console.Warn(err.Error())
 	}
 
-	config.SetUrlFromGit(remote)
+	config.SetURLFromGit(remote)
 
 	cfg, err := config.Load(c.f)
 	if err != nil {
@@ -67,11 +67,11 @@ func (c *Container) Init(needUpdateVersion version.V) error {
 	c.ch = changelog.NewGenerator(c.f, repo)
 
 	if err := config.Check(cfg, needUpdateVersion); err != nil {
-		if errors.Is(err, config.ErrConfigWarn) {
-			console.Warn(err.Error())
-		} else {
+		if !errors.Is(err, config.ErrConfigWarn) {
 			return err
 		}
+
+		console.Warn(err.Error())
 	}
 
 	return nil

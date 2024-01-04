@@ -19,7 +19,7 @@ git:
 	# Allow version downgrades with --version flag.
 	allowDowngrades: {{ .GitOptions.AllowDowngrades }}
 	# Remote repository URL.
-	repoURL: {{ .GitOptions.RemoteURL }}
+	remoteUrl: {{ .GitOptions.RemoteURL }}
 
 # Changelog settings.
 changelog:
@@ -34,7 +34,7 @@ changelog:
 	# 	- IssueURL: https://company.atlassian.net/jira/software/projects/PROJECT/issues/
 	# 	- IssueURL: https://github.com/company/project/issues/
 	# If empty, ang repository is CitHub, then issueHref will be set from remote repository URL.
-	IssueURL: "{{ .ChangelogOptions.IssueURL }}"
+	issueUrl: "{{ .ChangelogOptions.IssueURL }}"
 	# Show author in changelog.
 	showAuthor: {{ .ChangelogOptions.ShowAuthor }}
 	# Show body in changelog comment.
@@ -45,7 +45,8 @@ changelog:
 	commitTypes:
 	{{- range .ChangelogOptions.CommitTypes }}
 		- type: "{{ .Type }}"
-		- name: "{{ .Name }}"
+		  name: "{{ .Name }}"
+	{{- end}}
 
 # Bump files.
 # Change version in files. Version will be changed with format: <digital>.<digital>.<digital>

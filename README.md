@@ -5,5 +5,14 @@
 
 ![Go](https://img.shields.io/badge/Go-1.21-yellow.svg?style=plastic "Go")
 
-# version
-Git util for semantic versioning
+# Version
+
+A Linux utility for versioning using [semver](https://semver.org) and changelog generation via [Conventional Commits Specification](https://www.conventionalcommits.org/en/v1.0.0).
+
+## Installation
+
+```bash
+wget https://raw.githubusercontent.com/klimby/version/master/bin/version
+
+sudo chmod +x ./atm-backup
+```

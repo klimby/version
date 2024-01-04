@@ -45,10 +45,10 @@ type FSOption struct {
 func NewFS(opts ...func(*FSOption)) *FS {
 	fs := &FSOption{
 		Write: func(p string, flag int) (io.WriteCloser, error) {
-			return os.OpenFile(p, flag, 0644)
+			return os.OpenFile(p, flag, 0o644)
 		},
 		Read: func(p string) (io.ReadCloser, error) {
-			return os.OpenFile(p, os.O_RDONLY, 0644)
+			return os.OpenFile(p, os.O_RDONLY, 0o644)
 		},
 		Remove: os.Remove,
 	}

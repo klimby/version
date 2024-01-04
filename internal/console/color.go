@@ -20,6 +20,7 @@ var (
 func printLn(clr *color.Color, s string) {
 	if !viper.GetBool(config.Silent) {
 		if _, err := clr.Println(s); err != nil {
+			//nolint:forbidigo
 			fmt.Println(s)
 		}
 	}

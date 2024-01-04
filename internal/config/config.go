@@ -65,13 +65,14 @@ func newConfig(f file.Reader) (_ C, err error) {
 	}
 
 	cfg := File(viper.GetString(CfgFile))
+
 	r, err := f.Read(cfg.Path())
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return c, nil
-		} else {
-			return c, fmt.Errorf("open config file error: %w", err)
 		}
+
+		return c, fmt.Errorf("open config file error: %w", err)
 	}
 
 	defer func() {
@@ -99,6 +100,7 @@ func (c C) BumpFiles() []BumpFile {
 // Generate generates the configuration file.
 func (c C) Generate(f file.Writer) error {
 	p := File(viper.GetString(CfgFile))
+
 	w, err := f.Write(p.Path(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC)
 	if err != nil {
 		return fmt.Errorf("open config file error: %w", err)
@@ -133,7 +135,7 @@ type gitOptions struct {
 	// AllowDowngrades is a flag that indicates that version downgrades are allowed with the --version flag.
 	AllowDowngrades bool `yaml:"allowDowngrades"`
 	// RemoteURL is a remote repository URL.
-	RemoteURL string `yaml:"remoteURL"`
+	RemoteURL string `yaml:"remoteUrl"`
 }
 
 // changelogOptions is a changelog options.
@@ -145,13 +147,13 @@ type changelogOptions struct {
 	// Title is a changelog title.
 	Title string `yaml:"title"`
 	// Issue href template.
-	IssueURL string `yaml:"issueURL"`
+	IssueURL string `yaml:"issueUrl"`
 	// ShowAuthor is a flag that indicates that the author is shown in the changelog.
 	ShowAuthor bool `yaml:"showAuthor"`
 	// ShowBody is a flag that indicates that the body is shown in the changelog comment.
 	ShowBody bool `yaml:"showBody"`
 	// CommitTypes is a commit types for changelog.
-	CommitTypes []commitName `yaml:"commitTypes"`
+	CommitTypes []CommitName `yaml:"commitTypes"`
 }
 
 // BumpFile is a file for bump.
@@ -170,11 +172,6 @@ type BumpFile struct {
 // HasPositions returns true if the file has start and end positions.
 func (f BumpFile) HasPositions() bool {
 	return f.End != 0 && f.End >= f.Start
-}
-
-// hasRegExp returns true if the file has regexp.
-func (f BumpFile) hasRegExp() bool {
-	return len(f.RegExp) > 0
 }
 
 // IsPredefinedJSON returns true if the file is predefined (composer.json or package.json).

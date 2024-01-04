@@ -21,8 +21,7 @@ import (
 )
 
 var (
-	ErrWarning  = fmt.Errorf("changelog warning")
-	errGenerate = fmt.Errorf("changelog generate error")
+	ErrWarning = fmt.Errorf("changelog warning")
 )
 
 // Generator generates changelog.
@@ -44,6 +43,7 @@ type gitRepo interface {
 // NewGenerator creates new Generator.
 func NewGenerator(f file.ReadWriter, g gitRepo) *Generator {
 	n := config.File(viper.GetString(config.ChangelogFileName))
+
 	return &Generator{
 		repo: g,
 		f:    f,
@@ -212,20 +212,13 @@ func (g Generator) applyTemplate(wr io.Writer, nextV ...version.V) error {
 		return err
 	}
 
-	tagsTpl, err := newTagsTpl(c)
-	if err != nil {
-		return err
-	}
+	tagsTpl := newTagsTpl(c)
 
 	if len(tagsTpl.Tags) == 0 {
 		return fmt.Errorf("%w: no new commits", ErrWarning)
 	}
 
-	if err := tagsTpl.applyTemplate(wr); err != nil {
-		return err
-	}
-
-	return nil
+	return tagsTpl.applyTemplate(wr)
 }
 
 // Normalize changelog builder and convert to []byte.
@@ -234,5 +227,4 @@ func builder2B(b strings.Builder) []byte {
 	r := re.ReplaceAllString(b.String(), "\n\n")
 
 	return convert.S2B(r)
-
 }

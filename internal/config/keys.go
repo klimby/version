@@ -34,7 +34,6 @@ const (
 const (
 	_AppName               = "Version"
 	_Version               = "0.0.0"
-	_WorkDir               = ""
 	_AllowCommitDirty      = false
 	_AutoGenerateNextPatch = false
 	_AllowDowngrades       = false

@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// removeCmd represents the remove command
+// removeCmd represents the remove command.
 var removeCmd = &cobra.Command{
 	Use:           "remove",
 	Short:         "Remove files",

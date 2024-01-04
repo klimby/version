@@ -127,7 +127,6 @@ func commitName() func(c commitTpl) string {
 	showAuthor := viper.GetBool(config.ChangelogShowAuthor)
 
 	return func(c commitTpl) string {
-
 		var b strings.Builder
 
 		if c.Scope != "" {
@@ -151,6 +150,7 @@ func commitName() func(c commitTpl) string {
 
 		if showAuthor && c.Author != "" {
 			b.WriteString(" - ")
+
 			if c.AuthorHref != "" {
 				b.WriteString(fmt.Sprintf("[%s](%s)", c.Author, c.AuthorHref))
 			} else {
@@ -182,7 +182,6 @@ func addIssueURL() func(s string) string {
 
 			return fmt.Sprintf("[%s](%s)", i, u)
 		})
-
 	}
 }
 
@@ -192,7 +191,7 @@ type tagsTpl struct {
 }
 
 // newTagsTpl returns a new tagsTpl.
-func newTagsTpl(commits []git.Commit) (tagsTpl, error) {
+func newTagsTpl(commits []git.Commit) tagsTpl {
 	var tags []tagTpl
 
 	for _, c := range commits {
@@ -219,7 +218,7 @@ func newTagsTpl(commits []git.Commit) (tagsTpl, error) {
 
 	return tagsTpl{
 		Tags: tags,
-	}, nil
+	}
 }
 
 // applyTemplate applies the template to the commit message.

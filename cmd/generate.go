@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/klimby/version/internal/backup"
 	"github.com/klimby/version/internal/config"
 	"github.com/klimby/version/internal/console"
@@ -10,7 +12,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// generateCmd represents the generate command
+// generateCmd represents the generate command.
 var generateCmd = &cobra.Command{
 	Use:           "generate",
 	Short:         "Generate files",
@@ -18,12 +20,12 @@ var generateCmd = &cobra.Command{
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		config, err := cmd.Flags().GetBool("config")
+		c, err := cmd.Flags().GetBool("config-file")
 		if err != nil {
 			return err
 		}
 
-		if config {
+		if c {
 			return generateConfig()
 		}
 
@@ -36,7 +38,10 @@ var generateCmd = &cobra.Command{
 			return generateChangelog()
 		}
 
-		if !config && !changelog {
+		if !c && !changelog {
+
+			fmt.Println("DIR:" + viper.GetString(config.WorkDir))
+
 			if err := cmd.Help(); err != nil {
 				return err
 			}
@@ -47,7 +52,7 @@ var generateCmd = &cobra.Command{
 }
 
 func init() {
-	generateCmd.Flags().Bool("config", false, "generate config file")
+	generateCmd.Flags().Bool("config-file", false, "generate config file")
 	generateCmd.Flags().Bool("changelog", false, "generate changelog file")
 
 	rootCmd.AddCommand(generateCmd)

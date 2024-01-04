@@ -15,10 +15,6 @@ var (
 	reNum = regexp.MustCompile(`\d+`)
 )
 
-const (
-	_maxInt = int(^uint(0) >> 1) // max int value.
-)
-
 // V version.
 // Example: 1.0.0-asd+dd
 //
@@ -80,6 +76,7 @@ func (v V) Invalid() bool {
 
 // NextMajor returns the next major version.
 func (v V) NextMajor() V {
+	//nolint:dogsled
 	major, _, _, _, _ := v.semver()
 
 	return V(convert.I2S(major+1) + ".0.0")
@@ -87,6 +84,7 @@ func (v V) NextMajor() V {
 
 // NextMinor returns the next minor version.
 func (v V) NextMinor() V {
+	//nolint:dogsled
 	major, minor, _, _, _ := v.semver()
 
 	return V(convert.I2S(major) + "." + convert.I2S(minor+1) + ".0")
@@ -100,7 +98,7 @@ func (v V) NextPatch() V {
 }
 
 // Start returns the start version.
-func (v V) Start() V {
+func (V) Start() V {
 	return V("0.0.0")
 }
 
