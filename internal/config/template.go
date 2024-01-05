@@ -65,7 +65,7 @@ changelog:
 # 
 # All strings from file, that match regexp will be replaced with new version.
 #
-# - file: ./dir/file.txt
+# - file: dir/file.txt
 #   start: 0
 #   end: 100
 #
