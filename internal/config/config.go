@@ -22,6 +22,10 @@ type C struct {
 	IsFileConfig bool `yaml:"-"`
 	// BackupChangedFiles is a flag that indicates that the changed files are backed up.
 	Backup bool `yaml:"backupChanged"`
+	// Before is a list of commands that are executed before the main command.
+	Before []string `yaml:"before"`
+	// After is a list of commands that are executed after the main command.
+	After []string `yaml:"after"`
 	// GitOptions is a git options.
 	GitOptions gitOptions `yaml:"git"`
 	// ChangelogOptions is a changelog options.
@@ -34,6 +38,9 @@ type C struct {
 func newConfig(f file.Reader) (_ C, err error) {
 	c := C{
 		Version: version.V(viper.GetString(Version)),
+		Backup:  viper.GetBool(Backup),
+		Before:  viper.GetStringSlice(RunBefore),
+		After:   viper.GetStringSlice(RunAfter),
 		GitOptions: gitOptions{
 			AllowCommitDirty:      viper.GetBool(AllowCommitDirty),
 			AutoGenerateNextPatch: viper.GetBool(AutoGenerateNextPatch),

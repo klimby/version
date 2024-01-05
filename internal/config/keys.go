@@ -8,6 +8,9 @@ const (
 
 	RemoteURL = "repoURL" // Remote repository URL.
 
+	RunBefore = "runBefore" // Run command before commit. []string. Default: empty.
+	RunAfter  = "runAfter"  // Run command after commit. []string. Default: empty.
+
 	CfgFile = "configFile" // Configuration file name. Default: config.yaml.
 
 	AllowCommitDirty      = "allowCommitDirty"      // Allow commit dirty repository. Default: false.

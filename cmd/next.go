@@ -10,6 +10,7 @@ import (
 	"github.com/klimby/version/internal/di"
 	"github.com/klimby/version/internal/file"
 	"github.com/klimby/version/internal/git"
+	"github.com/klimby/version/internal/shell"
 	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -188,12 +189,26 @@ func next(opts ...func(options *nextArgs)) error {
 		console.Warn(err.Error())
 	}
 
+	before := viper.GetStringSlice(config.RunBefore)
+	for _, cmd := range before {
+		if err := shell.Cmd(cmd); err != nil {
+			console.Warn(err.Error())
+		}
+	}
+
 	if err := a.repo.AddModified(); err != nil {
 		console.Warn(err.Error())
 	}
 
 	if _, err := a.repo.CommitTag(nextV); err != nil {
 		return err
+	}
+
+	after := viper.GetStringSlice(config.RunAfter)
+	for _, cmd := range after {
+		if err := shell.Cmd(cmd); err != nil {
+			console.Warn(err.Error())
+		}
 	}
 
 	console.Success(fmt.Sprintf("Version bumped to %s", nextV.FormatString()))

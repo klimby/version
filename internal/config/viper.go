@@ -37,6 +37,8 @@ type Options struct {
 	Verbose               bool
 	ConfigFile            string
 	ChangelogCommitNames  []CommitName
+	RunBefore             []string
+	RunAfter              []string
 }
 
 // Init initializes the configuration.
@@ -57,6 +59,8 @@ func Init(opts ...func(options *Options)) {
 		// DryRun:                false,
 		// Backup:                false,
 		ChangelogCommitNames: _defaultCommitNames,
+		RunBefore:            []string{},
+		RunAfter:             []string{},
 	}
 
 	for _, opt := range opts {
@@ -104,6 +108,14 @@ func Init(opts ...func(options *Options)) {
 
 	if co.Verbose {
 		viper.Set(Verbose, co.Verbose)
+	}
+
+	if len(co.RunBefore) > 0 {
+		viper.Set(RunBefore, co.RunBefore)
+	}
+
+	if len(co.RunAfter) > 0 {
+		viper.Set(RunAfter, co.RunAfter)
 	}
 
 	setCommitNames(co.ChangelogCommitNames)
@@ -157,6 +169,9 @@ func Load(f file.Reader) (C, error) {
 		viper.Set(ChangelogTitle, c.ChangelogOptions.Title)
 		viper.Set(ChangelogShowAuthor, c.ChangelogOptions.ShowAuthor)
 		viper.Set(ChangelogShowBody, c.ChangelogOptions.ShowBody)
+
+		viper.Set(RunBefore, c.Before)
+		viper.Set(RunAfter, c.After)
 
 		if c.Backup {
 			viper.Set(Backup, c.Backup)

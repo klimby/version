@@ -10,6 +10,28 @@ version: {{ .Version }}
 # All original files will be saved with the .bak extension.
 backupChanged: {{ .Backup }}
 
+# Run commands before commit.
+# All commands will be executed from main directory (where version is located).
+# Commands will be executed in dry run mode too (without commit).
+# Examples:
+# before:
+# 	- echo "before commit"
+before:
+{{- range .Before }}
+	- {{ . }}
+{{- end}}
+
+# Run commands after commit.
+# All commands will be executed from main directory (where version is located).
+# Commands will be executed in dry run mode too (without commit).
+# Examples:
+# after:
+# 	- echo "after commit"
+after:
+{{- range .After }}
+	- {{ . }}
+{{- end}}
+
 # Git settings.
 git:
 	# Allow commit not clean repository.
