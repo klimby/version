@@ -24,10 +24,11 @@ const (
 	changelogCommitTypes = "changelog.commitTypes" // Commit types for changelog. Map[string]string. Key - type key, value- type name.
 	changelogCommitOrder = "changelog.commitOrder" // Commit types order for changelog. []string. Default: empty.
 
-	Backup = "backupChanged" // Backup changed files. Default: false.
-	Silent = "silent"        // Silent mode from flags.
-	DryRun = "dryRun"        // Dry run mode from flags.
-	Force  = "force"         // Force mode from flags.
+	Backup  = "backupChanged" // Backup changed files. Default: false.
+	Silent  = "silent"        // Silent mode from flags.
+	DryRun  = "dryRun"        // Dry run mode from flags.
+	Force   = "force"         // Force mode from flags.
+	Verbose = "verbose"       // Verbose mode from flags.
 )
 
 // Default values.

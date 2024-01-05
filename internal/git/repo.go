@@ -90,10 +90,38 @@ func (r Repository) IsClean() (bool, error) {
 		if !(s.Staging == git.Untracked && s.Worktree == git.Untracked) {
 			return false, nil
 		}
-
 	}
 
 	return true, nil
+}
+
+// AddModified adds modified files to the index.
+func (r Repository) AddModified() error {
+	if viper.GetBool(config.DryRun) {
+		return nil
+	}
+
+	w, err := r.repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("get worktree error: %w", err)
+	}
+
+	st, err := w.Status()
+	if err != nil {
+		return fmt.Errorf("get status error: %w", err)
+	}
+
+	for path, s := range st {
+		if s.Worktree == git.Modified || s.Staging == git.Added {
+			if err := w.AddWithOptions(&git.AddOptions{
+				Path: path,
+			}); err != nil {
+				return fmt.Errorf("add file %s error: %w", path, err)
+			}
+		}
+	}
+
+	return nil
 }
 
 // RemoteURL returns a repository name.
@@ -189,7 +217,7 @@ func (r Repository) CheckDowngrade(v version.V) error {
 		last = last.Start()
 	}
 
-	if last.Version().Compare(v) == -1 {
+	if v.LessThen(last) {
 		return fmt.Errorf("version downgrade: %s -> %s", last.Version().FormatString(), v.FormatString())
 	}
 
@@ -199,6 +227,10 @@ func (r Repository) CheckDowngrade(v version.V) error {
 // Add files to the index.
 // files is list from path to files FROM WORKDIR.
 func (r Repository) Add(files ...config.File) error {
+	if viper.GetBool(config.DryRun) {
+		return nil
+	}
+
 	w, err := r.repo.Worktree()
 	if err != nil {
 		return fmt.Errorf("get worktree error: %w", err)
@@ -217,6 +249,10 @@ func (r Repository) Add(files ...config.File) error {
 
 // CommitTag stores a tag and commit changes.
 func (r Repository) CommitTag(v version.V) (*Commit, error) {
+	if viper.GetBool(config.DryRun) {
+		return nil, nil
+	}
+
 	w, err := r.repo.Worktree()
 	if err != nil {
 		return nil, fmt.Errorf("get worktree error: %w", err)

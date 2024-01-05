@@ -34,6 +34,7 @@ type Options struct {
 	DryRun                bool
 	Backup                bool
 	Force                 bool
+	Verbose               bool
 	ConfigFile            string
 	ChangelogCommitNames  []CommitName
 }
@@ -99,6 +100,10 @@ func Init(opts ...func(options *Options)) {
 
 	if co.Backup {
 		viper.Set(Backup, co.Backup)
+	}
+
+	if co.Verbose {
+		viper.Set(Verbose, co.Verbose)
 	}
 
 	setCommitNames(co.ChangelogCommitNames)

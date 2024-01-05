@@ -72,6 +72,14 @@ func init() {
 	}
 
 	viper.SetDefault(config.WorkDir, "")
+
+	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "verbose output")
+
+	if err := viper.BindPFlag(config.Verbose, rootCmd.PersistentFlags().Lookup("verbose")); err != nil {
+		viper.Set(config.Verbose, false)
+	}
+
+	viper.SetDefault(config.Verbose, false)
 }
 
 func initConfig() {

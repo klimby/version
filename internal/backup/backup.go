@@ -59,7 +59,7 @@ func Create(f file.ReadWriter, path string) (err error) {
 		return err
 	}
 
-	console.Info("Backup file " + backPath + " created.")
+	console.Success("Backup file " + backPath + " created.")
 
 	return nil
 }
@@ -79,6 +79,6 @@ func Remove(f file.Remover, path ...string) {
 			continue
 		}
 
-		console.Info("Backup file " + backPath + " removed.")
+		console.Success("Backup file " + backPath + " removed.")
 	}
 }

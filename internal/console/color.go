@@ -50,3 +50,10 @@ func Notice(s string) {
 func Info(s string) {
 	printLn(_Info, s)
 }
+
+// Verbose - print verbose message.
+func Verbose(s string) {
+	if viper.GetBool(config.Verbose) {
+		printLn(_Info, s)
+	}
+}

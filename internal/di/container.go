@@ -3,6 +3,7 @@ package di
 import (
 	"errors"
 
+	"github.com/klimby/version/internal/bump"
 	"github.com/klimby/version/internal/changelog"
 	"github.com/klimby/version/internal/config"
 	"github.com/klimby/version/internal/console"
@@ -31,6 +32,9 @@ type container struct {
 	cfg *config.C
 
 	f *file.FS
+
+	// bump object singleton.
+	bump *bump.B
 }
 
 // Init initializes the container.
@@ -75,6 +79,11 @@ func (c *container) Init(needUpdateVersion version.V) error {
 		console.Warn(err.Error())
 	}
 
+	c.bump = bump.New(func(arg *bump.Args) {
+		arg.RW = c.f
+		arg.Repo = c.repo
+	})
+
 	return nil
 }
 
@@ -96,4 +105,9 @@ func (c *container) Config() *config.C {
 // FS returns the file system object.
 func (c *container) FS() *file.FS {
 	return c.f
+}
+
+// Bump returns the bump object.
+func (c *container) Bump() *bump.B {
+	return c.bump
 }

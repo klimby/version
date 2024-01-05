@@ -15,36 +15,79 @@ import (
 	"github.com/spf13/viper"
 )
 
+// B bump files by version.
+type B struct {
+	rw   file.ReadWriter
+	repo gitRepo
+}
+
+type gitRepo interface {
+	Add(files ...config.File) error
+}
+
+// Args is a Bump arguments.
+type Args struct {
+	RW   file.ReadWriter
+	Repo gitRepo
+}
+
+// New creates new Bump.
+func New(args ...func(arg *Args)) *B {
+	a := &Args{
+		RW: file.NewFS(),
+	}
+
+	for _, arg := range args {
+		arg(a)
+	}
+
+	if a.Repo == nil {
+		panic("invalid backup argument: repo is nil")
+	}
+
+	return &B{
+		rw:   a.RW,
+		repo: a.Repo,
+	}
+}
+
 // Apply bumps files.
-func Apply(f file.ReadWriter, bumps []config.BumpFile, v version.V) {
+func (b B) Apply(bumps []config.BumpFile, v version.V) {
 	for _, bmp := range bumps {
-		if err := backup.Create(f, bmp.File.Path()); err != nil {
+		if err := backup.Create(b.rw, bmp.File.Path()); err != nil {
 			console.Error(err.Error())
 		}
 
-		if err := applyToFile(f, bmp, v); err != nil {
-			console.Error(err.Error())
+		changed, err := b.applyToFile(bmp, v)
+		if err != nil {
+			console.Warn(err.Error())
+		}
+
+		if changed {
+			if err := b.repo.Add(bmp.File); err != nil {
+				console.Warn(err.Error())
+			}
 		}
 	}
 }
 
 // applyToFile bumps file.
-func applyToFile(f file.ReadWriter, bmp config.BumpFile, v version.V) error {
-	var content [][]byte
+func (b B) applyToFile(bmp config.BumpFile, v version.V) (bool, error) {
+	var content []string
 	changed := false
 
 	if bmp.IsPredefinedJSON() {
-		c, ch, err := bumpPredefinedJSON(f, bmp.File.Path(), v)
+		c, ch, err := b.bumpPredefinedJSON(bmp.File.Path(), v)
 		if err != nil {
-			return fmt.Errorf("bump predefined json file %s error: %w", bmp.File.String(), err)
+			return false, fmt.Errorf("bump predefined json file %s error: %w", bmp.File.String(), err)
 		}
 
 		content = c
 		changed = ch
 	} else {
-		c, ch, err := bumpCustomFile(f, bmp, v)
+		c, ch, err := b.bumpCustomFile(bmp, v)
 		if err != nil {
-			return fmt.Errorf("bump custom file %s error: %w", bmp.File.String(), err)
+			return false, fmt.Errorf("bump custom file %s error: %w", bmp.File.String(), err)
 		}
 
 		content = c
@@ -52,29 +95,29 @@ func applyToFile(f file.ReadWriter, bmp config.BumpFile, v version.V) error {
 	}
 
 	if len(content) == 0 {
-		return fmt.Errorf("file %s is not supported", bmp.File.String())
+		return false, fmt.Errorf("file %s is not supported", bmp.File.String())
 	}
 
 	if !changed {
 		console.Warn(fmt.Sprintf("File %s is not changed", bmp.File.String()))
 
-		return nil
+		return false, nil
 	}
 
 	if !viper.GetBool(config.DryRun) {
-		if err := write(f, bmp.File.Path(), content); err != nil {
-			return fmt.Errorf("write file %s error: %w", bmp.File.String(), err)
+		if err := b.write(bmp.File.Path(), content); err != nil {
+			return false, fmt.Errorf("write file %s error: %w", bmp.File.String(), err)
 		}
 	}
 
-	console.Info(fmt.Sprintf("Bump file %s", bmp.File.String()))
+	console.Success(fmt.Sprintf("Bump file %s", bmp.File.String()))
 
-	return nil
+	return changed, nil
 }
 
 // bumpPredefinedJSON bumps predefined json file (package.json, composer.json).
-func bumpPredefinedJSON(f file.Reader, patch string, v version.V) (_ [][]byte, changed bool, err error) {
-	r, err := f.Read(patch)
+func (b B) bumpPredefinedJSON(patch string, v version.V) (_ []string, changed bool, err error) {
+	r, err := b.rw.Read(patch)
 	if err != nil {
 		return nil, changed, fmt.Errorf("open file %s error: %w", patch, err)
 	}
@@ -89,15 +132,15 @@ func bumpPredefinedJSON(f file.Reader, patch string, v version.V) (_ [][]byte, c
 
 	scanner := bufio.NewScanner(r)
 	versionRegex := regexp.MustCompile(`"version"\s*:\s*".*?"`)
-	var content [][]byte
+	var content []string
 
-	replacer := convert.S2B(`"version": "` + v.FormatString() + `"`)
+	replacer := `"version": "` + v.FormatString() + `"`
 
 	for scanner.Scan() {
-		line := scanner.Bytes()
+		line := scanner.Text()
 
-		if !changed && versionRegex.Match(line) {
-			line = versionRegex.ReplaceAll(line, replacer)
+		if !changed && versionRegex.MatchString(line) {
+			line = versionRegex.ReplaceAllString(line, replacer)
 			changed = true
 		}
 
@@ -112,8 +155,8 @@ func bumpPredefinedJSON(f file.Reader, patch string, v version.V) (_ [][]byte, c
 }
 
 // bumpCustomFile bumps custom file.
-func bumpCustomFile(f file.Reader, bmp config.BumpFile, v version.V) (_ [][]byte, changed bool, err error) {
-	r, err := f.Read(bmp.File.Path())
+func (b B) bumpCustomFile(bmp config.BumpFile, v version.V) (_ []string, changed bool, err error) {
+	r, err := b.rw.Read(bmp.File.Path())
 	if err != nil {
 		return nil, changed, fmt.Errorf("open file %s error: %w", bmp.File.Path(), err)
 	}
@@ -128,7 +171,7 @@ func bumpCustomFile(f file.Reader, bmp config.BumpFile, v version.V) (_ [][]byte
 
 	scanner := bufio.NewScanner(r)
 	versionRegex := regexp.MustCompile(`\d+\.\d+\.\d+`)
-	var content [][]byte
+	var content []string
 
 	regArr := make([]*regexp.Regexp, 0, len(bmp.RegExp))
 
@@ -154,27 +197,29 @@ func bumpCustomFile(f file.Reader, bmp config.BumpFile, v version.V) (_ [][]byte
 	lineNum := 0
 
 	for scanner.Scan() {
-		line := scanner.Bytes()
+		line := scanner.Text()
 
 		if lineNum >= start && lineNum <= end {
-			if versionRegex.Match(line) {
+			if versionRegex.MatchString(line) {
 				if len(regArr) > 0 {
 					for _, r := range regArr {
-						if r.Match(line) {
-							line = versionRegex.ReplaceAll(line, convert.S2B(v.FormatString()))
+						if r.MatchString(line) {
+							line = versionRegex.ReplaceAllString(line, v.FormatString())
 							changed = true
 
 							break
 						}
 					}
 				} else {
-					line = versionRegex.ReplaceAll(line, convert.S2B(v.FormatString()))
+					line = versionRegex.ReplaceAllString(line, v.FormatString())
 					changed = true
 				}
 			}
 		}
 
 		content = append(content, line)
+
+		lineNum++
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -185,8 +230,8 @@ func bumpCustomFile(f file.Reader, bmp config.BumpFile, v version.V) (_ [][]byte
 }
 
 // write writes content to file.
-func write(f file.Writer, patch string, content [][]byte) (err error) {
-	w, err := f.Write(patch, os.O_WRONLY|os.O_TRUNC)
+func (b B) write(patch string, content []string) (err error) {
+	w, err := b.rw.Write(patch, os.O_WRONLY|os.O_TRUNC)
 	if err != nil {
 		return fmt.Errorf("open file %s error: %w", patch, err)
 	}
@@ -199,12 +244,10 @@ func write(f file.Writer, patch string, content [][]byte) (err error) {
 		}
 	}()
 
-	n := convert.S2B("\n")
-
 	for _, line := range content {
-		_, err := w.Write(append(line, n...))
+		_, err := w.Write(convert.S2B(line + "\n"))
 		if err != nil {
-			return fmt.Errorf("write file %s line %s error: %w", patch, convert.B2S(line), err)
+			return fmt.Errorf("write file %s line %s error: %w", patch, line, err)
 		}
 	}
 

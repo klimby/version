@@ -91,6 +91,12 @@ func (g Generator) Add(nextV version.V) (err error) {
 		return fmt.Errorf("write changelog file error: %w", err)
 	}
 
+	if err := g.repo.Add(g.f); err != nil {
+		return fmt.Errorf("add changelog file error: %w", err)
+	}
+
+	console.Success(fmt.Sprintf("Changelog %s updated to %s", g.f.String(), nextV.FormatString()))
+
 	return nil
 }
 
@@ -154,10 +160,8 @@ func (g Generator) load(nextV version.V, wr io.Writer) (err error) {
 		}
 	}
 
-	if !viper.GetBool(config.Silent) {
-		console.Notice("\nChangelog changed:\n")
-		console.Info(b.String())
-	}
+	console.Verbose("Changelog changed:")
+	console.Verbose(b.String())
 
 	return nil
 }
@@ -173,7 +177,13 @@ func (g Generator) generateAll(opt ...func(*git.CommitsArgs)) (err error) {
 		return err
 	}
 
-	return g.repo.Add(g.f)
+	if err := g.repo.Add(g.f); err != nil {
+		return fmt.Errorf("add changelog file error: %w", err)
+	}
+
+	console.Success(fmt.Sprintf("Changelog %s created", g.f.String()))
+
+	return nil
 }
 
 // rewrite changelog.
@@ -192,10 +202,8 @@ func (g Generator) rewrite(opt ...func(*git.CommitsArgs)) (err error) {
 		return err
 	}
 
-	if !viper.GetBool(config.Silent) {
-		console.Info("\n")
-		console.Info(b.String())
-	}
+	console.Verbose("Changelog created:")
+	console.Verbose(b.String())
 
 	if viper.GetBool(config.DryRun) {
 		return nil

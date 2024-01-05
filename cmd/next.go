@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/klimby/version/internal/bump"
 	"github.com/klimby/version/internal/changelog"
 	"github.com/klimby/version/internal/config"
 	"github.com/klimby/version/internal/console"
@@ -121,6 +120,7 @@ type nextArgs struct {
 	chGen  nextArgsChGen
 	cfg    nextArgsConfig
 	f      file.ReadWriter
+	bump   nextArgsBump
 }
 
 // nextArgsRepo - repo interface for nextArgs.
@@ -129,6 +129,7 @@ type nextArgsRepo interface {
 	NextVersion(nt git.NextType, custom version.V) (version.V, bool, error)
 	CheckDowngrade(v version.V) error
 	CommitTag(v version.V) (*git.Commit, error)
+	AddModified() error
 }
 
 // nextArgsChGen - changelog interface for nextArgs.
@@ -141,6 +142,11 @@ type nextArgsConfig interface {
 	BumpFiles() []config.BumpFile
 }
 
+// nextArgsBump - bump interface for nextArgs.
+type nextArgsBump interface {
+	Apply(bumps []config.BumpFile, v version.V)
+}
+
 // next - generate next version.
 func next(opts ...func(options *nextArgs)) error {
 	a := &nextArgs{
@@ -150,6 +156,7 @@ func next(opts ...func(options *nextArgs)) error {
 		chGen:  di.C.Changelog(),
 		cfg:    di.C.Config(),
 		f:      di.C.FS(),
+		bump:   di.C.Bump(),
 	}
 
 	for _, o := range opts {
@@ -171,7 +178,7 @@ func next(opts ...func(options *nextArgs)) error {
 		return err
 	}
 
-	bump.Apply(a.f, a.cfg.BumpFiles(), nextV)
+	a.bump.Apply(a.cfg.BumpFiles(), nextV)
 
 	if err := writeChangelog(a.chGen, nextV); err != nil {
 		if !errors.Is(err, changelog.ErrWarning) {
@@ -181,12 +188,12 @@ func next(opts ...func(options *nextArgs)) error {
 		console.Warn(err.Error())
 	}
 
-	return nil
+	if err := a.repo.AddModified(); err != nil {
+		console.Warn(err.Error())
+	}
 
-	if !viper.GetBool(config.DryRun) {
-		if _, err := a.repo.CommitTag(nextV); err != nil {
-			return err
-		}
+	if _, err := a.repo.CommitTag(nextV); err != nil {
+		return err
 	}
 
 	console.Success(fmt.Sprintf("Version bumped to %s", nextV.FormatString()))
