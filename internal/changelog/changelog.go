@@ -27,8 +27,8 @@ var (
 // Generator generates changelog.
 type Generator struct {
 	repo gitRepo
-	f    file.ReadWriter
-	path string
+	rw   file.ReadWriter
+	f    config.File
 }
 
 // gitRepo is git repository.
@@ -37,23 +37,24 @@ type gitRepo interface {
 	// If nextV is set, then the tag with this version is not created yet and nextV - new created version.
 	// In this case will ber returned commits from last tag to HEAD and last commit will be with nextV.
 	// If nextV is not set, then will be returned all commits.
-	Commits(nextV ...version.V) ([]git.Commit, error)
+	Commits(...func(options *git.CommitsArgs)) ([]git.Commit, error)
+
+	// Add adds files to git.
+	Add(files ...config.File) error
 }
 
 // NewGenerator creates new Generator.
 func NewGenerator(f file.ReadWriter, g gitRepo) *Generator {
-	n := config.File(viper.GetString(config.ChangelogFileName))
-
 	return &Generator{
 		repo: g,
-		f:    f,
-		path: n.Path(),
+		rw:   f,
+		f:    config.File(viper.GetString(config.ChangelogFileName)),
 	}
 }
 
 // Add adds new version to changelog.
 func (g Generator) Add(nextV version.V) (err error) {
-	if err := backup.Create(g.f, g.path); err != nil {
+	if err := backup.Create(g.rw, g.f.Path()); err != nil {
 		return err
 	}
 
@@ -61,7 +62,9 @@ func (g Generator) Add(nextV version.V) (err error) {
 
 	if err := g.load(nextV, &b); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return g.Generate()
+			return g.generateAll(func(args *git.CommitsArgs) {
+				args.NextV = nextV
+			})
 		}
 
 		return err
@@ -71,7 +74,7 @@ func (g Generator) Add(nextV version.V) (err error) {
 		return nil
 	}
 
-	w, err := g.f.Write(g.path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC)
+	w, err := g.rw.Write(g.f.Path(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC)
 	if err != nil {
 		return fmt.Errorf("open changelog file error: %w", err)
 	}
@@ -93,12 +96,8 @@ func (g Generator) Add(nextV version.V) (err error) {
 
 // load changes file.
 func (g Generator) load(nextV version.V, wr io.Writer) (err error) {
-	src, err := g.f.Read(g.path)
+	src, err := g.rw.Read(g.f.Path())
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return g.Generate()
-		}
-
 		return err
 	}
 
@@ -112,7 +111,10 @@ func (g Generator) load(nextV version.V, wr io.Writer) (err error) {
 
 	var b strings.Builder
 
-	if err := g.applyTemplate(&b, nextV); err != nil {
+	if err := g.applyTemplate(&b, func(args *git.CommitsArgs) {
+		args.NextV = nextV
+		args.LastOnly = true
+	}); err != nil {
 		return err
 	}
 
@@ -162,7 +164,21 @@ func (g Generator) load(nextV version.V, wr io.Writer) (err error) {
 
 // Generate generates changelog.
 func (g Generator) Generate() (err error) {
-	if err := backup.Create(g.f, g.path); err != nil {
+	return g.generateAll()
+}
+
+// generateAll generates changelog.
+func (g Generator) generateAll(opt ...func(*git.CommitsArgs)) (err error) {
+	if err := g.rewrite(opt...); err != nil {
+		return err
+	}
+
+	return g.repo.Add(g.f)
+}
+
+// rewrite changelog.
+func (g Generator) rewrite(opt ...func(*git.CommitsArgs)) (err error) {
+	if err := backup.Create(g.rw, g.f.Path()); err != nil {
 		return err
 	}
 
@@ -172,7 +188,7 @@ func (g Generator) Generate() (err error) {
 	b.WriteString("All notable changes to this project will be documented in this file. ")
 	b.WriteString("See [Conventional CommitsFromLast](https://www.conventionalcommits.org/en/v1.0.0/) for commit guidelines.\n")
 
-	if err := g.applyTemplate(&b); err != nil {
+	if err := g.applyTemplate(&b, opt...); err != nil {
 		return err
 	}
 
@@ -185,7 +201,7 @@ func (g Generator) Generate() (err error) {
 		return nil
 	}
 
-	w, err := g.f.Write(g.path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC)
+	w, err := g.rw.Write(g.f.Path(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC)
 	if err != nil {
 		return fmt.Errorf("open changelog file error: %w", err)
 	}
@@ -206,8 +222,8 @@ func (g Generator) Generate() (err error) {
 }
 
 // applyTemplate applies template to writer.
-func (g Generator) applyTemplate(wr io.Writer, nextV ...version.V) error {
-	c, err := g.repo.Commits(nextV...)
+func (g Generator) applyTemplate(wr io.Writer, opt ...func(*git.CommitsArgs)) error {
+	c, err := g.repo.Commits(opt...)
 	if err != nil {
 		return err
 	}

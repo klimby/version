@@ -34,6 +34,7 @@ var (
 // Repository is a git repository wrapper.
 type Repository struct {
 	repo *git.Repository
+	path string
 }
 
 // RepoOptions is a Repository options.
@@ -65,6 +66,7 @@ func NewRepository(opts ...func(options *RepoOptions)) (*Repository, error) {
 
 	return &Repository{
 		repo: r,
+		path: ro.Path,
 	}, nil
 }
 
@@ -85,9 +87,10 @@ func (r Repository) IsClean() (bool, error) {
 	}
 
 	for _, s := range st {
-		if s.Staging == git.Modified || s.Worktree == git.Modified {
+		if !(s.Staging == git.Untracked && s.Worktree == git.Untracked) {
 			return false, nil
 		}
+
 	}
 
 	return true, nil
@@ -193,6 +196,25 @@ func (r Repository) CheckDowngrade(v version.V) error {
 	return nil
 }
 
+// Add files to the index.
+// files is list from path to files FROM WORKDIR.
+func (r Repository) Add(files ...config.File) error {
+	w, err := r.repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("get worktree error: %w", err)
+	}
+
+	for _, f := range files {
+		if err := w.AddWithOptions(&git.AddOptions{
+			Path: f.Rel(),
+		}); err != nil {
+			return fmt.Errorf("add file %s error: %w", f.Rel(), err)
+		}
+	}
+
+	return nil
+}
+
 // CommitTag stores a tag and commit changes.
 func (r Repository) CommitTag(v version.V) (*Commit, error) {
 	w, err := r.repo.Worktree()
@@ -223,14 +245,24 @@ func (r Repository) CommitTag(v version.V) (*Commit, error) {
 	return &cmt, nil
 }
 
+// CommitsArgs is a Commits options.
+type CommitsArgs struct {
+	NextV    version.V
+	LastOnly bool
+}
+
 // Commits returns commits.
 // If nextV is set, then the tag with this version is not created yet and nextV - new created version.
 // In this case will ber returned commits from last tag to HEAD and last commit will be with nextV.
 // If nextV is not set, then will be returned all commits.
-func (r Repository) Commits(nextV ...version.V) ([]Commit, error) {
-	onlyLast := len(nextV) > 0
-	if onlyLast && nextV[0].Empty() {
-		return nil, fmt.Errorf("empty next version")
+func (r Repository) Commits(opt ...func(options *CommitsArgs)) ([]Commit, error) {
+	a := &CommitsArgs{
+		NextV:    version.V(""),
+		LastOnly: false,
+	}
+
+	for _, o := range opt {
+		o(a)
 	}
 
 	tags, err := r.tags()
@@ -247,11 +279,11 @@ func (r Repository) Commits(nextV ...version.V) ([]Commit, error) {
 
 	var cs []Commit
 
-	if onlyLast {
+	if !a.NextV.Empty() {
 		lastCommit := Commit{
 			Hash:    plumbing.ZeroHash.String(),
-			Message: fmt.Sprintf("chore(release): %s", nextV[0].FormatString()),
-			Version: nextV[0],
+			Message: fmt.Sprintf("chore(release): %s", a.NextV.GitVersion()),
+			Version: a.NextV,
 			Date:    time.Now(),
 		}
 
@@ -273,7 +305,7 @@ func (r Repository) Commits(nextV ...version.V) ([]Commit, error) {
 
 		setTagToCommit(&cmt, tags)
 
-		if onlyLast && cmt.IsTag() {
+		if a.LastOnly && cmt.IsTag() {
 			break
 		}
 

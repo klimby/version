@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/klimby/version/internal/bump"
+	"github.com/klimby/version/internal/changelog"
 	"github.com/klimby/version/internal/config"
 	"github.com/klimby/version/internal/console"
 	"github.com/klimby/version/internal/di"
@@ -173,8 +174,14 @@ func next(opts ...func(options *nextArgs)) error {
 	bump.Apply(a.f, a.cfg.BumpFiles(), nextV)
 
 	if err := writeChangelog(a.chGen, nextV); err != nil {
-		return err
+		if !errors.Is(err, changelog.ErrWarning) {
+			return err
+		}
+
+		console.Warn(err.Error())
 	}
+
+	return nil
 
 	if !viper.GetBool(config.DryRun) {
 		if _, err := a.repo.CommitTag(nextV); err != nil {

@@ -12,7 +12,7 @@ A Linux utility for versioning using [semver](https://semver.org) and changelog 
 ## Installation
 
 ```bash
-wget https://raw.githubusercontent.com/klimby/version/master/bin/version
+wget https://raw.githubusercontent.com/klimby/version/master/bin/version -O version 
 
 sudo chmod +x ./version
 ```

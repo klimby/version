@@ -14,19 +14,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// File is a file path.
-type File string
-
-// String returns the string representation of the file.
-func (f File) String() string {
-	return string(f)
-}
-
-// Path returns the file path.
-func (f File) Path() string {
-	return filepath.Join(viper.GetString(WorkDir), f.String())
-}
-
 // C is a configuration file.
 type C struct {
 	// Version is a version of the application.
