@@ -78,7 +78,7 @@ changelog:
   showBody: true
   # Commit types for changelog.
   # Type - commit type, value - commit type name.
-  # If empty, then all commit types will be used, except Breaking Changes.
+  # If empty, then all commit types will be hidden, except Breaking Changes.
   commitTypes:
     - type: "feat"
       name: "Features"
@@ -142,4 +142,4 @@ bump:
     start: 0
     end: 5
     regexp:
-      - ^!\[Version:.*$
+      - ^!\[Version:.*$	

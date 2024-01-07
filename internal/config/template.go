@@ -137,7 +137,7 @@ bump:
     start: {{ $value.Start }}
     end: {{ $value.End }}
 {{- end}}
-{{- if $value.HasRegExp }}
+{{- if $value.RegExp }}
     regexp: 
 {{- range $value.RegExp }}
       - {{ . }}
