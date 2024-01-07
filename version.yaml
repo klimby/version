@@ -52,7 +52,7 @@ git:
   # Allow commit not clean repository.
   commitDirty: true
   # Auto generate next patch version, if version exists.
-  autoNextPatch: false
+  autoNextPatch: true
   # Allow version downgrades with --version flag.
   allowDowngrades: false
   # Remote repository URL.
