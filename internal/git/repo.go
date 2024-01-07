@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/go-git/go-git/v5"
@@ -68,6 +69,11 @@ func NewRepository(opts ...func(options *RepoOptions)) (*Repository, error) {
 		repo: r,
 		path: ro.Path,
 	}, nil
+}
+
+// Repo returns a git repository.
+func (r Repository) Repo() *git.Repository {
+	return r.repo
 }
 
 // IsClean returns true if all the files are in Unmodified status.
@@ -160,7 +166,7 @@ func (r Repository) NextVersion(nt NextType, custom version.V) (_ version.V, exi
 
 		lastV = lastV.Start()
 	} else {
-		lastV = lastTag.Version()
+		lastV = lastTag.ver
 	}
 
 	if lastV.Empty() {
@@ -183,9 +189,7 @@ func (r Repository) NextVersion(nt NextType, custom version.V) (_ version.V, exi
 	}
 
 	for {
-		tag := next.GitVersion()
-
-		exists, err := r.tagExists(tag)
+		exists, err := r.versionExists(next)
 		if err != nil {
 			return "", exists, err
 		}
@@ -211,7 +215,7 @@ func (r Repository) CheckDowngrade(v version.V) error {
 		return err
 	}
 
-	last := lastTag.Version()
+	last := lastTag.ver
 
 	if last.Empty() {
 		last = last.Start()
@@ -303,11 +307,7 @@ func (r Repository) Commits(opt ...func(options *CommitsArgs)) ([]Commit, error)
 
 	tags, err := r.tags()
 	if err != nil {
-		if !errors.Is(err, plumbing.ErrObjectNotFound) {
-			return nil, err
-		}
-
-		tags = make([]tag, 0)
+		return nil, err
 	}
 
 	commits, err := r.repo.Log(&git.LogOptions{})
@@ -356,40 +356,25 @@ func (r Repository) Commits(opt ...func(options *CommitsArgs)) ([]Commit, error)
 }
 
 // setTagToCommit sets a tag to commit.
-func setTagToCommit(c *Commit, tags []tag) {
+func setTagToCommit(c *Commit, tags []tagCommit) {
 	for i := range tags {
-		if c.Hash == tags[i].t.Target.String() {
-			tagVer := tags[i].Version()
-
-			if !tagVer.Invalid() {
-				c.Version = tagVer
-			}
+		if c.Hash == tags[i].commitHash {
+			c.Version = tags[i].ver
 
 			break
 		}
 	}
 }
 
-// tagExists returns true if the tag exists.
-func (r Repository) tagExists(tag string) (bool, error) {
-	tags, err := r.repo.TagObjects()
+// versionExists returns true if the tag exists.
+func (r Repository) versionExists(v version.V) (bool, error) {
+	tags, err := r.tags()
 	if err != nil {
 		return false, err
 	}
 
-	defer tags.Close()
-
-	for {
-		t, err := tags.Next()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-
-			return false, err
-		}
-
-		if t.Name == tag {
+	for _, t := range tags {
+		if t.ver.Equal(v) {
 			return true, nil
 		}
 	}
@@ -398,12 +383,9 @@ func (r Repository) tagExists(tag string) (bool, error) {
 }
 
 // lastTag returns a last tag.
-func (r Repository) lastTag() (*tag, error) {
+func (r Repository) lastTag() (*tagCommit, error) {
 	tags, err := r.tags()
 	if err != nil {
-		if errors.Is(err, plumbing.ErrObjectNotFound) {
-			return nil, errTagsNotFound
-		}
 		return nil, err
 	}
 
@@ -415,7 +397,7 @@ func (r Repository) lastTag() (*tag, error) {
 }
 
 // tags returns a list of tags.
-func (r Repository) tags() ([]tag, error) {
+func (r Repository) tags() ([]tagCommit, error) {
 	tagRefs, err := r.repo.Tags()
 	if err != nil {
 		return nil, err
@@ -423,7 +405,7 @@ func (r Repository) tags() ([]tag, error) {
 
 	defer tagRefs.Close()
 
-	var tags []tag
+	var tags []tagCommit
 
 	for {
 		tagRef, err := tagRefs.Next()
@@ -435,19 +417,59 @@ func (r Repository) tags() ([]tag, error) {
 			return nil, err
 		}
 
-		if tagRef == nil {
-			break
-		}
+		tC := r.tagCommitFromRef(tagRef)
 
-		t, err := r.repo.TagObject(tagRef.Hash())
-		if err != nil {
-			return nil, err
-		}
-
-		tags = append(tags, tag{t: *t})
+		tags = append(tags, *tC)
 	}
 
 	return tags, nil
+}
+
+// tagCommitFromRef returns a tagCommit from plumbing.Reference.
+func (r Repository) tagCommitFromRef(ref *plumbing.Reference) *tagCommit {
+	if ref == nil || !ref.Name().IsTag() {
+		return nil
+	}
+
+	// Short name for tag ref - tag name (version in our case).
+	v := version.V(ref.Name().Short())
+	if v.Invalid() {
+		return nil
+	}
+
+	tc := &tagCommit{
+		ver: v,
+	}
+
+	// try to find commit object.
+	co, err := r.repo.CommitObject(ref.Hash())
+	if err != nil {
+		if !errors.Is(err, plumbing.ErrObjectNotFound) {
+			return nil
+		}
+	}
+
+	if co != nil {
+		tc.commitHash = co.Hash.String()
+
+		return tc
+	}
+
+	// if commit not found, then try to find tag object.
+	to, err := r.repo.TagObject(ref.Hash())
+	if err != nil {
+		if !errors.Is(err, plumbing.ErrObjectNotFound) {
+			return nil
+		}
+	}
+
+	if to != nil {
+		tc.commitHash = to.Target.String()
+
+		return tc
+	}
+
+	return nil
 }
 
 // Commit is a commit wrapper for return to external services.
@@ -477,6 +499,19 @@ func newCommitFromGit(c object.Commit) Commit {
 	}
 }
 
+// String returns a commit string.
+func (c Commit) String() string {
+	var b strings.Builder
+
+	b.WriteString(c.Hash[:7] + " | " + strings.Split(c.Message, "\n")[0])
+
+	if c.IsTag() {
+		b.WriteString(" | " + c.Version.GitVersion())
+	}
+
+	return b.String()
+}
+
 // IsTag returns true if the commit is tagged.
 func (c Commit) IsTag() bool {
 	return !c.Version.Invalid()
@@ -502,17 +537,12 @@ func (c Commit) AuthorHref() string {
 }
 
 // tag is a tag wrapper for return to external services.
-type tag struct {
-	t object.Tag
+type tagCommit struct {
+	commitHash string
+	ver        version.V
 }
 
-// Version returns a tag version.
-func (t tag) Version() version.V {
-	v := version.V(t.t.Name)
-
-	if v.Invalid() {
-		return ""
-	}
-
-	return v
+// String returns a tag string.
+func (t tagCommit) String() string {
+	return t.commitHash[:7] + " | " + t.ver.GitVersion()
 }

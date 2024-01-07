@@ -27,9 +27,6 @@ before:
     versionFlag: "VERSION"
     breakOnError: true
     runInDry: false
-  #- cmd: [ "cp", "./bin/version", "./version" ]
-  #  breakOnError: true
-  #  runInDry: false
 
 # Run commands after commit.
 # All commands will be executed from main directory (where version is located).
