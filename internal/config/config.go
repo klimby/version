@@ -7,11 +7,20 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/klimby/version/internal/file"
 	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
+)
+
+const (
+	// _VersionWarningUpdate is a version for warning update.
+	_VersionWarningUpdate = version.V("")
+	// _VersionCriticalUpdate is a version for critical update.
+	_VersionCriticalUpdate = version.V("")
 )
 
 // C is a configuration file.
@@ -23,9 +32,9 @@ type C struct {
 	// BackupChangedFiles is a flag that indicates that the changed files are backed up.
 	Backup bool `yaml:"backupChanged"`
 	// Before is a list of commands that are executed before the main command.
-	Before []string `yaml:"before"`
+	Before []Command `yaml:"before"`
 	// After is a list of commands that are executed after the main command.
-	After []string `yaml:"after"`
+	After []Command `yaml:"after"`
 	// GitOptions is a git options.
 	GitOptions gitOptions `yaml:"git"`
 	// ChangelogOptions is a changelog options.
@@ -39,8 +48,8 @@ func newConfig(f file.Reader) (_ C, err error) {
 	c := C{
 		Version: version.V(viper.GetString(Version)),
 		Backup:  viper.GetBool(Backup),
-		Before:  viper.GetStringSlice(RunBefore),
-		After:   viper.GetStringSlice(RunAfter),
+		Before:  []Command{},
+		After:   []Command{},
 		GitOptions: gitOptions{
 			AllowCommitDirty:      viper.GetBool(AllowCommitDirty),
 			AutoGenerateNextPatch: viper.GetBool(AutoGenerateNextPatch),
@@ -54,7 +63,7 @@ func newConfig(f file.Reader) (_ C, err error) {
 			IssueURL:    viper.GetString(ChangelogIssueURL),
 			ShowAuthor:  viper.GetBool(ChangelogShowAuthor),
 			ShowBody:    viper.GetBool(ChangelogShowBody),
-			CommitTypes: CommitNames(),
+			CommitTypes: _defaultCommitNames,
 		},
 	}
 
@@ -91,6 +100,21 @@ func (c C) BumpFiles() []BumpFile {
 	return c.Bump
 }
 
+// CommandsBefore returns a list of commands that are executed before the main command.
+func (c C) CommandsBefore() []Command {
+	return c.Before
+}
+
+// CommandsAfter returns a list of commands that are executed after the main command.
+func (c C) CommandsAfter() []Command {
+	return c.After
+}
+
+// CommitTypes returns a commit types for changelog.
+func (c C) CommitTypes() []CommitName {
+	return c.ChangelogOptions.CommitTypes
+}
+
 // Generate generates the configuration file.
 func (c C) Generate(f file.Writer) error {
 	p := File(viper.GetString(CfgFile))
@@ -115,6 +139,97 @@ func (c C) Generate(f file.Writer) error {
 
 	if err := tmpl.Execute(w, c); err != nil {
 		return fmt.Errorf("execute config template error: %w", err)
+	}
+
+	return nil
+}
+
+// Validate validates the configuration.
+func (c C) Validate() error {
+	if !c.IsFileConfig {
+		return nil
+	}
+
+	for _, f := range c.Before {
+		if err := f.validate(); err != nil {
+			return err
+		}
+	}
+
+	for _, f := range c.After {
+		if err := f.validate(); err != nil {
+			return err
+		}
+	}
+
+	if err := c.ChangelogOptions.validate(); err != nil {
+		return err
+	}
+
+	for _, f := range c.Bump {
+		if err := f.validate(); err != nil {
+			return err
+		}
+	}
+
+	return validateVersion(c.Version, _VersionWarningUpdate, _VersionCriticalUpdate)
+}
+
+// validateVersion validates the version.
+func validateVersion(current, warning, critical version.V) error {
+	if !critical.Empty() && current.LessThen(critical) {
+		return fmt.Errorf(`%w: you use older version of config file. For update run "version generate --config-file"`, errConfig)
+	}
+
+	if !warning.Empty() && current.LessThen(warning) {
+		return fmt.Errorf(`%w: you use older version of config file. For update run "version generate --config-file"`, ErrConfigWarn)
+	}
+
+	return nil
+}
+
+// Command is a command for run before or after git commit.
+type Command struct {
+	// Cmd is a command.
+	// Example: ["go", "build", "-o", "bin/app", "."]
+	Cmd []string `yaml:"cmd"`
+	// Flag to send bumped version in format 1.2.3 to command. Optional.
+	VersionFlag string `yaml:"versionFlag"`
+	// BreakOnError is a flag that indicates that the command is stopped if an error occurs.
+	BreakOnError bool `yaml:"breakOnError"`
+	// RunInDry is a flag that indicates that the command is run in dry mode.
+	RunInDry bool `yaml:"runInDry"`
+}
+
+// String returns a command string.
+func (c Command) String() string {
+	return strings.Join(c.Cmd, " ")
+}
+
+// Name returns a command name.
+func (c Command) Name() string {
+	return c.Cmd[0]
+}
+
+// Args returns a command args.
+func (c Command) Args(v version.V) []string {
+	var args []string
+
+	if len(c.Cmd) > 1 {
+		args = append(args, c.Cmd[1:]...)
+	}
+
+	if c.VersionFlag != "" {
+		args = append(args, c.VersionFlag+"="+v.FormatString())
+	}
+
+	return args
+}
+
+// validate the command.
+func (c Command) validate() error {
+	if len(c.Cmd) == 0 {
+		return fmt.Errorf("%w: empty command", errConfig)
 	}
 
 	return nil
@@ -150,6 +265,25 @@ type changelogOptions struct {
 	CommitTypes []CommitName `yaml:"commitTypes"`
 }
 
+// validate validates the changelog options.
+func (c changelogOptions) validate() error {
+	if !c.Generate {
+		return nil
+	}
+
+	if c.FileName.empty() || c.FileName.IsAbs() {
+		return fmt.Errorf(`%w: changelog file name is empty or absolute path`, errConfig)
+	}
+
+	for _, t := range c.CommitTypes {
+		if t.Type == "" || t.Name == "" {
+			return fmt.Errorf(`%w: commit type is empty`, errConfig)
+		}
+	}
+
+	return nil
+}
+
 // BumpFile is a file for bump.
 type BumpFile struct {
 	// File path.
@@ -173,4 +307,34 @@ func (f BumpFile) HasPositions() bool {
 func (f BumpFile) IsPredefinedJSON() bool {
 	n := filepath.Base(f.File.String())
 	return n == "composer.json" || n == "package.json"
+}
+
+// validate BumpFile validates the file for bump.
+func (f BumpFile) validate() error {
+	// check if file exists
+	if _, err := os.Stat(f.File.Path()); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf(`%w: file %s does not exist`, errConfig, f.File)
+		}
+
+		return fmt.Errorf(`%w: file %s error: %w`, errConfig, f.File, err)
+	}
+
+	if f.IsPredefinedJSON() {
+		return nil
+	}
+
+	if f.Start > f.End {
+		return fmt.Errorf(`%w: file %s start position is greater than end position`, errConfig, f.File)
+	}
+
+	if len(f.RegExp) > 0 {
+		for _, r := range f.RegExp {
+			if _, err := regexp.Compile(r); err != nil {
+				return fmt.Errorf(`%w: file %s regexp %s error: %w`, errConfig, f.File, r, err)
+			}
+		}
+	}
+
+	return nil
 }

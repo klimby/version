@@ -10,7 +10,6 @@ import (
 	"github.com/klimby/version/internal/di"
 	"github.com/klimby/version/internal/file"
 	"github.com/klimby/version/internal/git"
-	"github.com/klimby/version/internal/shell"
 	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -122,6 +121,7 @@ type nextArgs struct {
 	cfg    nextArgsConfig
 	f      file.ReadWriter
 	bump   nextArgsBump
+	cmd    nextArgsCmd
 }
 
 // nextArgsRepo - repo interface for nextArgs.
@@ -141,11 +141,18 @@ type nextArgsChGen interface {
 // nextArgsConfig - config interface for nextArgs.
 type nextArgsConfig interface {
 	BumpFiles() []config.BumpFile
+	CommandsBefore() []config.Command
+	CommandsAfter() []config.Command
 }
 
 // nextArgsBump - bump interface for nextArgs.
 type nextArgsBump interface {
 	Apply(bumps []config.BumpFile, v version.V)
+}
+
+// nextArgsCmd - cmd interface for nextArgs.
+type nextArgsCmd interface {
+	Run(name string, arg ...string) error
 }
 
 // next - generate next version.
@@ -158,6 +165,7 @@ func next(opts ...func(options *nextArgs)) error {
 		cfg:    di.C.Config(),
 		f:      di.C.FS(),
 		bump:   di.C.Bump(),
+		cmd:    di.C.Cmd(),
 	}
 
 	for _, o := range opts {
@@ -173,7 +181,7 @@ func next(opts ...func(options *nextArgs)) error {
 		return err
 	}
 
-	console.Notice(fmt.Sprintf("Bump version to %s", nextV.FormatString()))
+	console.Notice(fmt.Sprintf("Bump version to %s...", nextV.FormatString()))
 
 	if err := checkDowngrade(a.repo, nextV); err != nil {
 		return err
@@ -189,11 +197,8 @@ func next(opts ...func(options *nextArgs)) error {
 		console.Warn(err.Error())
 	}
 
-	before := viper.GetStringSlice(config.RunBefore)
-	for _, cmd := range before {
-		if err := shell.Cmd(cmd); err != nil {
-			console.Warn(err.Error())
-		}
+	if err := runCommands(a.cmd, a.cfg.CommandsBefore(), nextV); err != nil {
+		return err
 	}
 
 	if err := a.repo.AddModified(); err != nil {
@@ -204,14 +209,34 @@ func next(opts ...func(options *nextArgs)) error {
 		return err
 	}
 
-	after := viper.GetStringSlice(config.RunAfter)
-	for _, cmd := range after {
-		if err := shell.Cmd(cmd); err != nil {
+	if err := runCommands(a.cmd, a.cfg.CommandsAfter(), nextV); err != nil {
+		return err
+	}
+
+	console.Success(fmt.Sprintf("Version bumped to %s.", nextV.FormatString()))
+
+	return nil
+}
+
+// runCommands runs commands.
+func runCommands(cmd nextArgsCmd, cs []config.Command, v version.V) error {
+	dryMode := viper.GetBool(config.DryRun)
+
+	for _, c := range cs {
+		if dryMode && !c.RunInDry {
+			console.Verbose(fmt.Sprintf("Skip command %s in dry mode", c.String()))
+			continue
+		}
+
+		args := c.Args(v)
+		if err := cmd.Run(c.Name(), args...); err != nil {
+			if c.BreakOnError {
+				return err
+			}
+
 			console.Warn(err.Error())
 		}
 	}
-
-	console.Success(fmt.Sprintf("Version bumped to %s", nextV.FormatString()))
 
 	return nil
 }

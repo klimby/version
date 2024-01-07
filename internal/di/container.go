@@ -9,7 +9,6 @@ import (
 	"github.com/klimby/version/internal/console"
 	"github.com/klimby/version/internal/file"
 	"github.com/klimby/version/internal/git"
-	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/viper"
 )
 
@@ -35,10 +34,13 @@ type container struct {
 
 	// bump object singleton.
 	bump *bump.B
+
+	// cmd object singleton.
+	c *console.Cmd
 }
 
 // Init initializes the container.
-func (c *container) Init(needUpdateVersion version.V) error {
+func (c *container) Init() error {
 	if c.IsInit {
 		return errors.New("container is already initialized")
 	}
@@ -71,7 +73,7 @@ func (c *container) Init(needUpdateVersion version.V) error {
 
 	c.ch = changelog.NewGenerator(c.f, repo)
 
-	if err := config.Check(cfg, needUpdateVersion); err != nil {
+	if err := cfg.Validate(); err != nil {
 		if !errors.Is(err, config.ErrConfigWarn) {
 			return err
 		}
@@ -83,6 +85,8 @@ func (c *container) Init(needUpdateVersion version.V) error {
 		arg.RW = c.f
 		arg.Repo = c.repo
 	})
+
+	c.c = console.NewCmd()
 
 	return nil
 }
@@ -110,4 +114,9 @@ func (c *container) FS() *file.FS {
 // Bump returns the bump object.
 func (c *container) Bump() *bump.B {
 	return c.bump
+}
+
+// Cmd returns the console command object.
+func (c *container) Cmd() *console.Cmd {
+	return c.c
 }

@@ -65,7 +65,7 @@ func removeBackup(opts ...func(options *removeArgs)) error {
 		opt(a)
 	}
 
-	console.Notice("Remove backup files\n")
+	console.Notice("Remove backup files...")
 
 	p := config.File(viper.GetString(config.CfgFile))
 

@@ -2,18 +2,15 @@ package config
 
 import (
 	"errors"
-	"fmt"
 	"net/url"
-	"os"
-	"regexp"
 
 	"github.com/klimby/version/internal/file"
-	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/viper"
 )
 
 var (
-	errConfig     = errors.New("config error")
+	errConfig = errors.New("config error")
+	// ErrConfigWarn is a config warning.
 	ErrConfigWarn = errors.New("config warning")
 )
 
@@ -37,8 +34,6 @@ type Options struct {
 	Verbose               bool
 	ConfigFile            string
 	ChangelogCommitNames  []CommitName
-	RunBefore             []string
-	RunAfter              []string
 }
 
 // Init initializes the configuration.
@@ -59,8 +54,6 @@ func Init(opts ...func(options *Options)) {
 		// DryRun:                false,
 		// Backup:                false,
 		ChangelogCommitNames: _defaultCommitNames,
-		RunBefore:            []string{},
-		RunAfter:             []string{},
 	}
 
 	for _, opt := range opts {
@@ -108,14 +101,6 @@ func Init(opts ...func(options *Options)) {
 
 	if co.Verbose {
 		viper.Set(Verbose, co.Verbose)
-	}
-
-	if len(co.RunBefore) > 0 {
-		viper.Set(RunBefore, co.RunBefore)
-	}
-
-	if len(co.RunAfter) > 0 {
-		viper.Set(RunAfter, co.RunAfter)
 	}
 
 	setCommitNames(co.ChangelogCommitNames)
@@ -170,9 +155,6 @@ func Load(f file.Reader) (C, error) {
 		viper.Set(ChangelogShowAuthor, c.ChangelogOptions.ShowAuthor)
 		viper.Set(ChangelogShowBody, c.ChangelogOptions.ShowBody)
 
-		viper.Set(RunBefore, c.Before)
-		viper.Set(RunAfter, c.After)
-
 		if c.Backup {
 			viper.Set(Backup, c.Backup)
 		}
@@ -187,47 +169,6 @@ func Load(f file.Reader) (C, error) {
 	}
 
 	return c, nil
-}
-
-// Check checks the configuration.
-// Run after config.Load() in main.go.
-func Check(c C, needUpdateVersion version.V) error {
-	if !c.IsFileConfig {
-		return nil
-	}
-
-	for _, f := range c.Bump {
-		// check if file exists
-		if _, err := os.Stat(f.File.Path()); err != nil {
-			if os.IsNotExist(err) {
-				return fmt.Errorf(`%w: file %s does not exist`, errConfig, f.File)
-			}
-
-			return fmt.Errorf(`%w: file %s error: %w`, errConfig, f.File, err)
-		}
-
-		if f.IsPredefinedJSON() {
-			continue
-		}
-
-		if f.Start > f.End {
-			return fmt.Errorf(`%w: file %s start position is greater than end position`, errConfig, f.File)
-		}
-
-		if len(f.RegExp) > 0 {
-			for _, r := range f.RegExp {
-				if _, err := regexp.Compile(r); err != nil {
-					return fmt.Errorf(`%w: file %s regexp %s error: %w`, errConfig, f.File, r, err)
-				}
-			}
-		}
-	}
-
-	if !needUpdateVersion.Empty() && c.Version.LessThen(needUpdateVersion) {
-		return fmt.Errorf(`%w: you use older version of config file. For update run "version generate --config"`, ErrConfigWarn)
-	}
-
-	return nil
 }
 
 func setCommitNames(names []CommitName) {

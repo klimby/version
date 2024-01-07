@@ -16,7 +16,7 @@ import (
 var generateCmd = &cobra.Command{
 	Use:           "generate",
 	Short:         "Generate files",
-	Long:          fmt.Sprintf(`Generate and rewrite config and changelog files.`),
+	Long:          `Generate and rewrite config and changelog files.`,
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -78,7 +78,7 @@ func generateConfig(opts ...func(options *generateConfigArgs)) error {
 		opt(a)
 	}
 
-	console.Notice("Generate config file\n")
+	console.Notice("Generate config file...")
 
 	p := config.File(viper.GetString(config.CfgFile))
 
@@ -90,7 +90,7 @@ func generateConfig(opts ...func(options *generateConfigArgs)) error {
 		return err
 	}
 
-	console.Success("Config file generated.")
+	console.Success(fmt.Sprintf("Config %s created.", p.String()))
 
 	return nil
 }
@@ -115,13 +115,17 @@ func generateChangelog(opts ...func(options *generateChangelogArgs)) error {
 		opt(a)
 	}
 
-	console.Notice("Generate changelog\n")
+	if !viper.GetBool(config.GenerateChangelog) {
+		console.Info("Changelog generation disabled.")
+
+		return nil
+	}
+
+	console.Notice("Generate changelog...")
 
 	if err := a.chGen.Generate(); err != nil {
 		return err
 	}
-
-	console.Success("Changelog generated.")
 
 	return nil
 }

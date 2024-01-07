@@ -16,6 +16,7 @@ func main() {
 		options.Version = version
 	})
 
+	// Di init in cmd.rootCmd in cmd.initConfig()
 	if err := cmd.Execute(); err != nil {
 		console.Error(err.Error())
 		os.Exit(1)

@@ -22,7 +22,7 @@ sudo chmod +x ./version
 ### Common help
 
 ```bash
-$ version --help
+$ ./version --help
 CLI tool for versioning, generate changelog, bump version.
 
 Usage:

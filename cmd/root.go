@@ -82,8 +82,10 @@ func init() {
 	viper.SetDefault(config.Verbose, false)
 }
 
+// initConfig reads in config file and initializes di.
+// It run after init(), main() and before Execute().
 func initConfig() {
-	if err := di.C.Init(""); err != nil {
+	if err := di.C.Init(); err != nil {
 		console.Error(err.Error())
 
 		os.Exit(1)
