@@ -71,8 +71,6 @@ func (c *container) Init() error {
 
 	c.cfg = &cfg
 
-	c.ch = changelog.NewGenerator(c.f, repo)
-
 	if err := cfg.Validate(); err != nil {
 		if !errors.Is(err, config.ErrConfigWarn) {
 			return err
@@ -80,6 +78,13 @@ func (c *container) Init() error {
 
 		console.Warn(err.Error())
 	}
+
+	c.ch = changelog.New(func(options *changelog.Args) {
+		options.RW = c.f
+		options.Repo = c.repo
+		options.ConfigFile = config.File(viper.GetString(config.ChangelogFileName))
+		options.CommitNames = cfg.CommitTypes()
+	})
 
 	c.bump = bump.New(func(arg *bump.Args) {
 		arg.RW = c.f

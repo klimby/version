@@ -21,6 +21,7 @@ import (
 )
 
 var (
+	// ErrWarning is a warning error.
 	ErrWarning = fmt.Errorf("changelog warning")
 )
 
@@ -29,6 +30,7 @@ type Generator struct {
 	repo gitRepo
 	rw   file.ReadWriter
 	f    config.File
+	nms  []config.CommitName
 }
 
 // gitRepo is git repository.
@@ -43,12 +45,34 @@ type gitRepo interface {
 	Add(files ...config.File) error
 }
 
-// NewGenerator creates new Generator.
-func NewGenerator(f file.ReadWriter, g gitRepo) *Generator {
+// Args is a Generator arguments.
+type Args struct {
+	Repo        gitRepo
+	RW          file.ReadWriter
+	ConfigFile  config.File
+	CommitNames []config.CommitName
+}
+
+// New creates new Generator.
+func New(args ...func(arg *Args)) *Generator {
+	a := &Args{
+		RW:         file.NewFS(),
+		ConfigFile: config.File(viper.GetString(config.ChangelogFileName)),
+	}
+
+	for _, arg := range args {
+		arg(a)
+	}
+
+	if a.Repo == nil {
+		panic("invalid changelog generator argument: repo is nil")
+	}
+
 	return &Generator{
-		repo: g,
-		rw:   f,
-		f:    config.File(viper.GetString(config.ChangelogFileName)),
+		repo: a.Repo,
+		rw:   a.RW,
+		f:    a.ConfigFile,
+		nms:  a.CommitNames,
 	}
 }
 
@@ -236,7 +260,7 @@ func (g Generator) applyTemplate(wr io.Writer, opt ...func(*git.CommitsArgs)) er
 		return err
 	}
 
-	tagsTpl := newTagsTpl(c)
+	tagsTpl := newTagsTpl(g.nms, c)
 
 	if len(tagsTpl.Tags) == 0 {
 		return fmt.Errorf("%w: no new commits", ErrWarning)

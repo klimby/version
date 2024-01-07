@@ -19,7 +19,15 @@ func Cmd(name string, arg ...string) error {
 
 	n := spl[0]
 
-	a := append(spl[1:], arg...)
+	var a []string
+
+	if len(spl) > 1 {
+		a = append(a, spl[1:]...)
+	}
+
+	if len(arg) > 0 {
+		a = append(a, arg...)
+	}
 
 	cmd := exec.Command(n, a...)
 

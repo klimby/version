@@ -123,9 +123,5 @@ func generateChangelog(opts ...func(options *generateChangelogArgs)) error {
 
 	console.Notice("Generate changelog...")
 
-	if err := a.chGen.Generate(); err != nil {
-		return err
-	}
-
-	return nil
+	return a.chGen.Generate()
 }

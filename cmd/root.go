@@ -88,6 +88,7 @@ func initConfig() {
 	if err := di.C.Init(); err != nil {
 		console.Error(err.Error())
 
+		//nolint:revive
 		os.Exit(1)
 	}
 }

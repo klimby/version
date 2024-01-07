@@ -17,7 +17,7 @@ func NewCmd() *Cmd {
 }
 
 // Run runs command.
-func (c *Cmd) Run(name string, arg ...string) error {
+func (*Cmd) Run(name string, arg ...string) error {
 	// split name and args.
 	spl := strings.Split(name, " ")
 	if len(spl) == 0 || spl[0] == "" {
@@ -32,6 +32,7 @@ func (c *Cmd) Run(name string, arg ...string) error {
 		a = append(spl[1:], a...)
 	}
 
+	//nolint:gosec
 	cmd := exec.Command(spl[0], a...)
 
 	errOut := &stdErrOutput{}

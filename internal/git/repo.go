@@ -250,7 +250,7 @@ func (r Repository) Add(files ...config.File) error {
 // CommitTag stores a tag and commit changes.
 func (r Repository) CommitTag(v version.V) (*Commit, error) {
 	if viper.GetBool(config.DryRun) {
-		return nil, nil
+		return &Commit{}, nil
 	}
 
 	w, err := r.repo.Worktree()

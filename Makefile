@@ -9,10 +9,7 @@ GIT_VERSION_TAG := $(shell git describe --tags $$(git rev-list --tags --max-coun
 # Package version - git tag without 'v' prefix
 PACKAGE_VERSION := $(patsubst v%,%,$(GIT_VERSION_TAG))
 
-
 .DEFAULT_GOAL := help
-
----------------: ## ---------------
 
 .PHONY: help
 help: ## Show this help
@@ -20,5 +17,32 @@ help: ## Show this help
 
 
 .PHONY: build
-build: ## Build go files
-	go build  -ldflags "-s -w -X main.version=$(PACKAGE_VERSION)" -o ./bin/version github.com/klimby/version
+build: ## Build to bin folder
+	@if [ -z "$(VERSION)" ]; then \
+  		go build -ldflags "-s -w -X main.version=$(PACKAGE_VERSION)" -o ./bin/version github.com/klimby/version; \
+  	else \
+    	go build -ldflags "-s -w -X main.version=$(VERSION)" -o ./bin/version github.com/klimby/version; \
+	fi
+	sudo chmod +x ./bin/version
+
+.PHONY: build-self
+build-self: ## Build to root folder for use in this project
+	go build  -ldflags "-s -w -X main.version=$(PACKAGE_VERSION)" -o . github.com/klimby/version
+	sudo chmod +x ./bin/version
+
+.PHONY: copy
+copy: ## Copy from bin folder to root folder for use in this project
+	cp ./bin/version ./
+
+.PHONY: patch
+patch: ## Patch version
+	./version next --patch
+
+.PHONY: minor
+minor: ## Minor version
+	./version next --minor
+
+.PHONY: major
+major: ## Major version
+	./version next --major
+

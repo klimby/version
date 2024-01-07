@@ -10,3 +10,6 @@ notes.md
 
 /.run
 /debug
+/version
+
+*.bak

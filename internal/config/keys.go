@@ -21,9 +21,6 @@ const (
 	ChangelogShowAuthor = "changelog.showAuthor" // Show author in changelog. Default: false.
 	ChangelogShowBody   = "changelog.showBody"   // Show body in changelog comment. Default: true.
 
-	changelogCommitTypes = "changelog.commitTypes" // Commit types for changelog. Map[string]string. Key - type key, value- type name.
-	changelogCommitOrder = "changelog.commitOrder" // Commit types order for changelog. []string. Default: empty.
-
 	Backup  = "backupChanged" // Backup changed files. Default: false.
 	Silent  = "silent"        // Silent mode from flags.
 	DryRun  = "dryRun"        // Dry run mode from flags.

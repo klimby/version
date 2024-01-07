@@ -698,6 +698,7 @@ linters-settings:
         disabled: false
         arguments:
           - nolint
+          - goland
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#confusing-naming
       - name: confusing-naming
         severity: warning

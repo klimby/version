@@ -33,7 +33,6 @@ type Options struct {
 	Force                 bool
 	Verbose               bool
 	ConfigFile            string
-	ChangelogCommitNames  []CommitName
 }
 
 // Init initializes the configuration.
@@ -53,7 +52,6 @@ func Init(opts ...func(options *Options)) {
 		// Silent:                false,
 		// DryRun:                false,
 		// Backup:                false,
-		ChangelogCommitNames: _defaultCommitNames,
 	}
 
 	for _, opt := range opts {
@@ -102,10 +100,9 @@ func Init(opts ...func(options *Options)) {
 	if co.Verbose {
 		viper.Set(Verbose, co.Verbose)
 	}
-
-	setCommitNames(co.ChangelogCommitNames)
 }
 
+// SetForce sets force mode.
 func SetForce() {
 	if viper.GetBool(Force) {
 		viper.Set(AllowCommitDirty, true)
@@ -169,15 +166,4 @@ func Load(f file.Reader) (C, error) {
 	}
 
 	return c, nil
-}
-
-func setCommitNames(names []CommitName) {
-	mp, order := toViperCommitNames(names)
-	viper.Set(changelogCommitTypes, mp)
-	viper.Set(changelogCommitOrder, order)
-}
-
-// CommitNames returns a list of commit names.
-func CommitNames() []CommitName {
-	return fromViperCommitNames(viper.GetStringMapString(changelogCommitTypes), viper.GetStringSlice(changelogCommitOrder))
 }

@@ -36,9 +36,7 @@ type tagTplBlock struct {
 }
 
 // newTagTpl returns a new tagTpl.
-func newTagTpl(tag version.V, date time.Time) tagTpl {
-	nms := config.CommitNames()
-
+func newTagTpl(nms []config.CommitName, tag version.V, date time.Time) tagTpl {
 	blocks := make([]tagTplBlock, len(nms))
 
 	for i, nm := range nms {
@@ -191,7 +189,7 @@ type tagsTpl struct {
 }
 
 // newTagsTpl returns a new tagsTpl.
-func newTagsTpl(commits []git.Commit) tagsTpl {
+func newTagsTpl(nms []config.CommitName, commits []git.Commit) tagsTpl {
 	var tags []tagTpl
 
 	for _, c := range commits {
@@ -200,7 +198,7 @@ func newTagsTpl(commits []git.Commit) tagsTpl {
 				tags[len(tags)-1].setPrev(c.Version)
 			}
 
-			t := newTagTpl(c.Version, c.Date)
+			t := newTagTpl(nms, c.Version, c.Date)
 
 			tags = append(tags, t)
 

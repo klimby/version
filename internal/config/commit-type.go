@@ -34,30 +34,3 @@ var _defaultCommitNames = []CommitName{
 	{Type: _CommitCI, Name: "Continuous Integration"},
 	{Type: CommitChore, Name: "Other changes"},
 }
-
-// toViperCommitNames converts commit names to viper types.
-func toViperCommitNames(names []CommitName) (types map[string]string, order []string) {
-	types = make(map[string]string, len(names))
-	order = make([]string, len(names))
-
-	for i, name := range names {
-		types[name.Type] = name.Name
-		order[i] = name.Type
-	}
-
-	return types, order
-}
-
-// fromViperCommitNames converts viper types to commit names.
-func fromViperCommitNames(types map[string]string, order []string) []CommitName {
-	names := make([]CommitName, 0, len(types))
-
-	for _, tp := range order {
-		names = append(names, CommitName{
-			Type: tp,
-			Name: types[tp],
-		})
-	}
-
-	return names
-}
