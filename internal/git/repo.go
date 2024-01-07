@@ -303,7 +303,11 @@ func (r Repository) Commits(opt ...func(options *CommitsArgs)) ([]Commit, error)
 
 	tags, err := r.tags()
 	if err != nil {
-		return nil, err
+		if !errors.Is(err, plumbing.ErrObjectNotFound) {
+			return nil, err
+		}
+
+		tags = make([]tag, 0)
 	}
 
 	commits, err := r.repo.Log(&git.LogOptions{})
@@ -397,6 +401,9 @@ func (r Repository) tagExists(tag string) (bool, error) {
 func (r Repository) lastTag() (*tag, error) {
 	tags, err := r.tags()
 	if err != nil {
+		if errors.Is(err, plumbing.ErrObjectNotFound) {
+			return nil, errTagsNotFound
+		}
 		return nil, err
 	}
 
