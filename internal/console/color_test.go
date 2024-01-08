@@ -8,9 +8,6 @@ import (
 )
 
 func TestError(t *testing.T) {
-	stdout := &__fakeWriter{}
-	stderr := &__fakeWriter{}
-
 	type args struct {
 		s        string
 		colorize bool
@@ -54,6 +51,8 @@ func TestError(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			stdout := &__fakeWriter{}
+			stderr := &__fakeWriter{}
 
 			SetOutput(func(arg *OutArgs) {
 				arg.Stdout = stdout
@@ -63,14 +62,7 @@ func TestError(t *testing.T) {
 
 			viper.Set(config.Silent, tt.args.silent)
 
-			defer func() {
-				if err := stdout.Close(); err != nil {
-					t.Errorf("stdout.Close() error = %v", err)
-				}
-				if err := stderr.Close(); err != nil {
-					t.Errorf("stderr.Close() error = %v", err)
-				}
-			}()
+			defer viper.Set(config.Silent, false)
 
 			Error(tt.args.s)
 
@@ -86,9 +78,6 @@ func TestError(t *testing.T) {
 }
 
 func TestWarn(t *testing.T) {
-	stdout := &__fakeWriter{}
-	stderr := &__fakeWriter{}
-
 	type args struct {
 		s        string
 		colorize bool
@@ -109,20 +98,14 @@ func TestWarn(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			stdout := &__fakeWriter{}
+			stderr := &__fakeWriter{}
+
 			SetOutput(func(arg *OutArgs) {
 				arg.Stdout = stdout
 				arg.Stderr = stderr
 				arg.Colorize = tt.args.colorize
 			})
-
-			defer func() {
-				if err := stdout.Close(); err != nil {
-					t.Errorf("stdout.Close() error = %v", err)
-				}
-				if err := stderr.Close(); err != nil {
-					t.Errorf("stderr.Close() error = %v", err)
-				}
-			}()
 
 			Warn(tt.args.s)
 
@@ -138,9 +121,6 @@ func TestWarn(t *testing.T) {
 }
 
 func TestSuccess(t *testing.T) {
-	stdout := &__fakeWriter{}
-	stderr := &__fakeWriter{}
-
 	type args struct {
 		s        string
 		colorize bool
@@ -161,20 +141,14 @@ func TestSuccess(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			stdout := &__fakeWriter{}
+			stderr := &__fakeWriter{}
+
 			SetOutput(func(arg *OutArgs) {
 				arg.Stdout = stdout
 				arg.Stderr = stderr
 				arg.Colorize = tt.args.colorize
 			})
-
-			defer func() {
-				if err := stdout.Close(); err != nil {
-					t.Errorf("stdout.Close() error = %v", err)
-				}
-				if err := stderr.Close(); err != nil {
-					t.Errorf("stderr.Close() error = %v", err)
-				}
-			}()
 
 			Success(tt.args.s)
 
@@ -190,9 +164,6 @@ func TestSuccess(t *testing.T) {
 }
 
 func TestNotice(t *testing.T) {
-	stdout := &__fakeWriter{}
-	stderr := &__fakeWriter{}
-
 	type args struct {
 		s        string
 		colorize bool
@@ -213,20 +184,14 @@ func TestNotice(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			stdout := &__fakeWriter{}
+			stderr := &__fakeWriter{}
+
 			SetOutput(func(arg *OutArgs) {
 				arg.Stdout = stdout
 				arg.Stderr = stderr
 				arg.Colorize = tt.args.colorize
 			})
-
-			defer func() {
-				if err := stdout.Close(); err != nil {
-					t.Errorf("stdout.Close() error = %v", err)
-				}
-				if err := stderr.Close(); err != nil {
-					t.Errorf("stderr.Close() error = %v", err)
-				}
-			}()
 
 			Notice(tt.args.s)
 
@@ -242,9 +207,6 @@ func TestNotice(t *testing.T) {
 }
 
 func TestInfo(t *testing.T) {
-	stdout := &__fakeWriter{}
-	stderr := &__fakeWriter{}
-
 	type args struct {
 		s        string
 		colorize bool
@@ -265,20 +227,14 @@ func TestInfo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			stdout := &__fakeWriter{}
+			stderr := &__fakeWriter{}
+
 			SetOutput(func(arg *OutArgs) {
 				arg.Stdout = stdout
 				arg.Stderr = stderr
 				arg.Colorize = tt.args.colorize
 			})
-
-			defer func() {
-				if err := stdout.Close(); err != nil {
-					t.Errorf("stdout.Close() error = %v", err)
-				}
-				if err := stderr.Close(); err != nil {
-					t.Errorf("stderr.Close() error = %v", err)
-				}
-			}()
 
 			Info(tt.args.s)
 
@@ -294,9 +250,6 @@ func TestInfo(t *testing.T) {
 }
 
 func TestVerbose(t *testing.T) {
-	stdout := &__fakeWriter{}
-	stderr := &__fakeWriter{}
-
 	type args struct {
 		s        string
 		colorize bool
@@ -327,6 +280,9 @@ func TestVerbose(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			stdout := &__fakeWriter{}
+			stderr := &__fakeWriter{}
+
 			SetOutput(func(arg *OutArgs) {
 				arg.Stdout = stdout
 				arg.Stderr = stderr
@@ -335,14 +291,7 @@ func TestVerbose(t *testing.T) {
 
 			viper.Set(config.Verbose, tt.args.verbose)
 
-			defer func() {
-				if err := stdout.Close(); err != nil {
-					t.Errorf("stdout.Close() error = %v", err)
-				}
-				if err := stderr.Close(); err != nil {
-					t.Errorf("stderr.Close() error = %v", err)
-				}
-			}()
+			defer viper.Set(config.Verbose, false)
 
 			Verbose(tt.args.s)
 
@@ -364,10 +313,4 @@ type __fakeWriter struct {
 func (f *__fakeWriter) Write(p []byte) (int, error) {
 	f.p = p
 	return len(p), nil
-}
-
-func (f *__fakeWriter) Close() error {
-	f.p = nil
-
-	return nil
 }

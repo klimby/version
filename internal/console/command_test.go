@@ -91,8 +91,6 @@ func Test_normalizeArgs(t *testing.T) {
 }
 
 func Test_stdErrOutput_Write(t *testing.T) {
-	stdout := &__fakeWriter{}
-	stderr := &__fakeWriter{}
 
 	type args struct {
 		p []byte
@@ -114,20 +112,14 @@ func Test_stdErrOutput_Write(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			stdout := &__fakeWriter{}
+			stderr := &__fakeWriter{}
+
 			SetOutput(func(arg *OutArgs) {
 				arg.Stdout = stdout
 				arg.Stderr = stderr
 				arg.Colorize = false
 			})
-
-			defer func() {
-				if err := stdout.Close(); err != nil {
-					t.Errorf("stdout.Close() error = %v", err)
-				}
-				if err := stderr.Close(); err != nil {
-					t.Errorf("stderr.Close() error = %v", err)
-				}
-			}()
 
 			s := &stdErrOutput{}
 
@@ -148,9 +140,6 @@ func Test_stdErrOutput_Write(t *testing.T) {
 }
 
 func Test_stdStdOutput_Write(t *testing.T) {
-	stdout := &__fakeWriter{}
-	stderr := &__fakeWriter{}
-
 	type args struct {
 		p []byte
 	}
@@ -171,20 +160,16 @@ func Test_stdStdOutput_Write(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			stdout := &__fakeWriter{}
+			stderr := &__fakeWriter{}
+
 			SetOutput(func(arg *OutArgs) {
 				arg.Stdout = stdout
 				arg.Stderr = stderr
 				arg.Colorize = false
 			})
-
-			defer func() {
-				if err := stdout.Close(); err != nil {
-					t.Errorf("stdout.Close() error = %v", err)
-				}
-				if err := stderr.Close(); err != nil {
-					t.Errorf("stderr.Close() error = %v", err)
-				}
-			}()
 
 			s := &stdOutput{}
 
@@ -258,7 +243,7 @@ func TestCmd_Run(t *testing.T) {
 			eO := &__fakeCmdStderr{}
 			c := &Cmd{
 				commandFactory: func(name string, arg ...string) runner {
-					cmd := &__fakeRunnner{
+					cmd := &__fakeRunner{
 						stdOut:   sO,
 						stdErr:   eO,
 						behavior: tt.runnerBehavior,
@@ -290,28 +275,13 @@ func TestCmd_Run(t *testing.T) {
 	}
 }
 
-type __fakeConsoleWriter struct {
-	p []byte
-}
-
-func (f *__fakeConsoleWriter) Write(p []byte) (int, error) {
-	f.p = p
-	return len(p), nil
-}
-
-func (f *__fakeConsoleWriter) Close() error {
-	f.p = nil
-
-	return nil
-}
-
-type __fakeRunnner struct {
+type __fakeRunner struct {
 	stdOut   io.Writer
 	stdErr   io.Writer
 	behavior int // 0 - ok, 1 - error on run, 2 - error in stdErr
 }
 
-func (f *__fakeRunnner) Run() error {
+func (f *__fakeRunner) Run() error {
 	if f.behavior == 1 {
 		return io.EOF
 	}
@@ -338,12 +308,6 @@ type __fakeCmdStderr struct {
 func (f *__fakeCmdStderr) Write(p []byte) (int, error) {
 	f.p = p
 	return len(p), nil
-}
-
-func (f *__fakeCmdStderr) Close() error {
-	f.p = nil
-
-	return nil
 }
 
 func (f *__fakeCmdStderr) isError() bool {
