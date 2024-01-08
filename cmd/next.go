@@ -213,7 +213,7 @@ func next(opts ...func(options *nextArgs)) error {
 		return err
 	}
 
-	console.Success(fmt.Sprintf("Version bumped to %s.", nextV.FormatString()))
+	console.Success(fmt.Sprintf("Version set to %s.", nextV.FormatString()))
 
 	return nil
 }

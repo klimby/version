@@ -2,6 +2,7 @@ package console
 
 import (
 	"fmt"
+	"io"
 	"os/exec"
 	"strings"
 
@@ -9,51 +10,79 @@ import (
 )
 
 // Cmd is a command runner.
-type Cmd struct{}
+type Cmd struct {
+	commandFactory func(name string, arg ...string) runner
+	stdout         io.Writer
+	stderr         errorWriter
+}
+
+type errorWriter interface {
+	io.Writer
+	isError() bool
+}
+
+type runner interface {
+	Run() error
+}
 
 // NewCmd creates new Cmd.
 func NewCmd() *Cmd {
-	return &Cmd{}
+	sO := &stdOutput{}
+	eO := &stdErrOutput{}
+	return &Cmd{
+		commandFactory: func(name string, arg ...string) runner {
+			cmd := exec.Command(name, arg...)
+			cmd.Stdout = sO
+			cmd.Stderr = eO
+
+			return cmd
+		},
+		stdout: sO,
+		stderr: eO,
+	}
 }
 
 // Run runs command.
-func (*Cmd) Run(name string, arg ...string) error {
-	// split name and args.
-	spl := strings.Split(name, " ")
-	if len(spl) == 0 || spl[0] == "" {
-		return fmt.Errorf("invalid command: %s", name)
+func (c *Cmd) Run(name string, arg ...string) error {
+	nm, a, err := normalizeArgs(name, arg...)
+	if err != nil {
+		return err
 	}
 
-	var a []string
-
-	copy(a, arg)
-
-	if len(spl) > 1 {
-		a = append(spl[1:], a...)
-	}
-
-	//nolint:gosec
-	cmd := exec.Command(spl[0], a...)
-
-	errOut := &stdErrOutput{}
+	cmd := c.commandFactory(nm, a...)
 
 	n := commandString(name, arg...)
-
-	// pipe the commands output to the applications.
-	// standard output.
-	// cmd.Stdout = stdOutOutput{}.
-	cmd.Stdout = stdOutput{}
-	cmd.Stderr = errOut
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("could not run command %s: %w", n, err)
 	}
 
-	if errOut.isError {
+	if c.stderr.isError() {
 		return fmt.Errorf("command %s run error", n)
 	}
 
 	return nil
+}
+
+// normalizeArgs transform arguments.
+func normalizeArgs(name string, arg ...string) (string, []string, error) {
+	// split name and args.
+	spl := strings.Split(name, " ")
+	if len(spl) == 0 || spl[0] == "" {
+		return "", nil, fmt.Errorf("invalid command: %s", name)
+	}
+
+	var a []string
+
+	if len(arg) > 0 {
+		a = append(a, arg...)
+	}
+
+	if len(spl) > 1 {
+		a = append(spl[1:], a...)
+	}
+
+	return spl[0], a, nil
 }
 
 // commandString return command string.
@@ -72,12 +101,16 @@ func commandString(name string, arg ...string) string {
 }
 
 type stdErrOutput struct {
-	isError bool
+	isErr bool
+}
+
+func (s *stdErrOutput) isError() bool {
+	return s.isErr
 }
 
 func (s *stdErrOutput) Write(p []byte) (int, error) {
 	Error(convert.B2S(p))
-	s.isError = true
+	s.isErr = true
 
 	return len(p), nil
 }

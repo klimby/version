@@ -16,6 +16,12 @@ func TestV_Compare(t *testing.T) {
 			want:   0,
 		},
 		{
+			name:   "invalid + invalid",
+			first:  "alpha",
+			second: "beta",
+			want:   -1,
+		},
+		{
 			name:   "1.1.0 == 1.1.0",
 			first:  "1.1.0",
 			second: "1.1.0",
@@ -111,6 +117,12 @@ func TestV_Compare(t *testing.T) {
 			second: V("1.0.0"),
 			want:   -1,
 		},
+		{
+			name:   "1.0.0-beta.2+gamma < 1.0.0-beta.2",
+			first:  V("1.0.0-beta.2+gamma"),
+			second: V("1.0.0-beta.2"),
+			want:   -1,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -130,6 +142,11 @@ func TestV_Invalid(t *testing.T) {
 		{
 			name: "invalid",
 			v:    "invalid",
+			want: true,
+		},
+		{
+			name: "invalid",
+			v:    "",
 			want: true,
 		},
 		{
@@ -476,6 +493,275 @@ func TestCompareDESC(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := CompareDESC(tt.args.v, tt.args.o); got != tt.want {
 				t.Errorf("CompareDESC() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestV_Empty(t *testing.T) {
+	tests := []struct {
+		name string
+		v    V
+		want bool
+	}{
+		{
+			name: "empty",
+			v:    "",
+			want: true,
+		},
+		{
+			name: "not empty",
+			v:    "1.0.0",
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.v.Empty(); got != tt.want {
+				t.Errorf("Empty() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestV_Equal(t *testing.T) {
+	type args struct {
+		o V
+	}
+	tests := []struct {
+		name string
+		v    V
+		args args
+		want bool
+	}{
+		{
+			name: "equal",
+			v:    "1.0.0",
+			args: args{
+				o: "1.0.0",
+			},
+			want: true,
+		},
+		{
+			name: "not equal",
+			v:    "1.0.0",
+			args: args{
+				o: "2.0.0",
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.v.Equal(tt.args.o); got != tt.want {
+				t.Errorf("Equal() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestV_FormatString(t *testing.T) {
+	tests := []struct {
+		name string
+		v    V
+		want string
+	}{
+		{
+			name: "invalid",
+			v:    "invalid",
+			want: "",
+		},
+		{
+			name: "valid",
+			v:    "1.0.0",
+			want: "1.0.0",
+		},
+		{
+			name: "valid - v",
+			v:    "v1.0.0",
+			want: "1.0.0",
+		},
+		{
+			name: "valid - alpha",
+			v:    "1.0.0-alpha",
+			want: "1.0.0-alpha",
+		},
+		{
+			name: "valid - alpha.1",
+			v:    "1.0.0-alpha.1",
+			want: "1.0.0-alpha.1",
+		},
+		{
+			name: "valid - alpha+beta",
+			v:    "1.0.0-alpha+beta",
+			want: "1.0.0-alpha+beta",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.v.FormatString(); got != tt.want {
+				t.Errorf("FormatString() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestV_NextMajor(t *testing.T) {
+	tests := []struct {
+		name string
+		v    V
+		want V
+	}{
+		{
+			name: "invalid",
+			v:    "invalid",
+			want: "1.0.0",
+		},
+		{
+			name: "valid",
+			v:    "1.0.0",
+			want: "2.0.0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.v.NextMajor(); got != tt.want {
+				t.Errorf("NextMajor() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestV_NextMinor(t *testing.T) {
+	tests := []struct {
+		name string
+		v    V
+		want V
+	}{
+		{
+			name: "invalid",
+			v:    "invalid",
+			want: "0.1.0",
+		},
+		{
+			name: "valid",
+			v:    "1.0.0",
+			want: "1.1.0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.v.NextMinor(); got != tt.want {
+				t.Errorf("NextMinor() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestV_NextPatch(t *testing.T) {
+	tests := []struct {
+		name string
+		v    V
+		want V
+	}{
+		{
+			name: "invalid",
+			v:    "invalid",
+			want: "0.0.1",
+		},
+		{
+			name: "valid",
+			v:    "1.0.0",
+			want: "1.0.1",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.v.NextPatch(); got != tt.want {
+				t.Errorf("NextPatch() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestV_Start(t *testing.T) {
+	tests := []struct {
+		name string
+		v    V
+		want V
+	}{
+		{
+			name: "invalid",
+			v:    "invalid",
+			want: "0.0.0",
+		},
+		{
+			name: "valid",
+			v:    "1.0.0",
+			want: "0.0.0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.v.Start(); got != tt.want {
+				t.Errorf("Start() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestV_GitVersion(t *testing.T) {
+	tests := []struct {
+		name string
+		v    V
+		want string
+	}{
+		{
+			name: "1.0.0",
+			v:    "1.0.0",
+			want: "v1.0.0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.v.GitVersion(); got != tt.want {
+				t.Errorf("GitVersion() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestV_LessThen(t *testing.T) {
+	type args struct {
+		o V
+	}
+	tests := []struct {
+		name string
+		v    V
+		args args
+		want bool
+	}{
+		{
+			name: "1.0.0 < 2.0.0",
+			v:    "1.0.0",
+			args: args{
+				o: "2.0.0",
+			},
+			want: true,
+		},
+		{
+			name: "1.0.0 > 2.0.0",
+			v:    "2.0.0",
+			args: args{
+				o: "1.0.0",
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.v.LessThen(tt.args.o); got != tt.want {
+				t.Errorf("LessThen() = %v, want %v", got, tt.want)
 			}
 		})
 	}
