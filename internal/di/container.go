@@ -4,12 +4,14 @@ import (
 	"errors"
 	"os"
 
+	"github.com/klimby/version/internal/action"
 	"github.com/klimby/version/internal/bump"
 	"github.com/klimby/version/internal/changelog"
 	"github.com/klimby/version/internal/config"
 	"github.com/klimby/version/internal/console"
 	"github.com/klimby/version/internal/file"
 	"github.com/klimby/version/internal/git"
+	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/viper"
 )
 
@@ -38,6 +40,29 @@ type container struct {
 
 	// cmd object singleton.
 	c *console.Cmd
+
+	// ActionRemove object singleton.
+	ActionRemove actionRemove
+
+	// ActionGenerate object singleton.
+	ActionGenerate actionGenerate
+
+	// ActionNext object singleton.
+	ActionNext actionNext
+}
+
+type actionRemove interface {
+	Backup()
+}
+
+type actionGenerate interface {
+	Config() error
+	Changelog() error
+}
+
+type actionNext interface {
+	Prepare(args ...func(arg *action.PrepareNextArgs)) (version.V, error)
+	Apply(nextV version.V) error
 }
 
 // Init initializes the container.
@@ -108,35 +133,40 @@ func (c *container) Init() error {
 
 	c.c = console.NewCmd()
 
+	a, err := action.NewRemove(func(options *action.ArgsRemove) {
+		options.Cfg = cfg
+	})
+
+	if err != nil {
+		return err
+	}
+
+	c.ActionRemove = a
+
+	aG, err := action.NewGenerate(func(options *action.GenerateArgs) {
+		options.Rw = c.f
+		options.CfgGen = cfg
+		options.ClogGen = c.ch
+	})
+	if err != nil {
+		return err
+	}
+
+	c.ActionGenerate = aG
+
+	aN, err := action.NewNext(func(args *action.NextArgs) {
+		args.Repo = c.repo
+		args.ChGen = c.ch
+		args.Cfg = c.cfg
+		args.F = c.f
+		args.Bump = c.bump
+		args.Cmd = c.c
+	})
+	if err != nil {
+		return err
+	}
+
+	c.ActionNext = aN
+
 	return nil
-}
-
-// Repo returns the repo object.
-func (c *container) Repo() *git.Repository {
-	return c.repo
-}
-
-// Changelog returns the changelog object.
-func (c *container) Changelog() *changelog.Generator {
-	return c.ch
-}
-
-// Config returns the config object.
-func (c *container) Config() *config.C {
-	return c.cfg
-}
-
-// FS returns the file system object.
-func (c *container) FS() *file.FS {
-	return c.f
-}
-
-// Bump returns the bump object.
-func (c *container) Bump() *bump.B {
-	return c.bump
-}
-
-// Cmd returns the console command object.
-func (c *container) Cmd() *console.Cmd {
-	return c.c
 }

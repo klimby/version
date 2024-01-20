@@ -56,7 +56,7 @@ func InitTest(colorize ...bool) func() {
 }
 
 // Init - init console.
-// WARNING: without args
+// WARNING: without args.
 func Init(args ...func(*OutArgs)) {
 	arg := OutArgs{
 		Stdout:   &nilWriter{},
@@ -75,7 +75,7 @@ func Init(args ...func(*OutArgs)) {
 
 // Read - read stdout and stderr, if they are testWriter.
 // For testing.
-func Read() (stdout string, stderr string) {
+func Read() (stdout, stderr string) {
 	// check if stdout is testWriter
 	if w, ok := c.stdout.(*testWriter); ok {
 		stdout = w.String()
@@ -152,7 +152,7 @@ func Info(s string) {
 type nilWriter struct{}
 
 // Write - write to nowhere.
-func (n *nilWriter) Write(p []byte) (int, error) {
+func (*nilWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 

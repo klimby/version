@@ -1,8 +1,10 @@
 package cmd
 
 import (
-	"github.com/klimby/version/internal/action"
+	"fmt"
+
 	"github.com/klimby/version/internal/di"
+	"github.com/klimby/version/internal/types"
 	"github.com/spf13/cobra"
 )
 
@@ -14,44 +16,33 @@ var removeCmd = &cobra.Command{
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		remove := di.C.ActionRemove
+		if remove == nil {
+			return fmt.Errorf("action remove is nil: %w", types.ErrNotInitialized)
+		}
+
 		backup, err := cmd.Flags().GetBool("backup")
 		if err != nil {
 			return err
 		}
 
 		if backup {
-			a, err := callRemoveBackup()
-			if err != nil {
-				return err
-			}
-
-			a.Backup()
+			remove.Backup()
 
 			return nil
 		}
 
-		if !backup {
-			if err := cmd.Help(); err != nil {
-				return err
-			}
-		}
-
-		return nil
+		return cmd.Help()
 	},
 }
 
 // init - init remove command.
 func init() {
-	removeCmd.Flags().Bool("backup", false, "remove backup files")
+	initRemoveCmd()
 	rootCmd.AddCommand(removeCmd)
 }
 
-type hasRemoveBackup interface {
-	Backup()
-}
-
-var callRemoveBackup = func() (hasRemoveBackup, error) {
-	return action.NewRemove(func(options *action.ArgsRemove) {
-		options.Cfg = di.C.Config()
-	})
+// initRemoveCmd - init remove command.
+func initRemoveCmd() {
+	removeCmd.Flags().Bool("backup", false, "remove backup files")
 }

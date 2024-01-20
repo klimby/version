@@ -11,26 +11,31 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Generate - generate action.
 type Generate struct {
 	rw      file.ReadWriter
 	cfgGen  configGenerator
 	clogGen changelogGenerator
 }
 
+// configGenerator - config generator interface.
 type configGenerator interface {
 	Generate(file.Writer) error
 }
 
+// changelogGenerator - changelog generator interface.
 type changelogGenerator interface {
 	Generate() error
 }
 
+// GenerateArgs - arguments for Generate.
 type GenerateArgs struct {
 	Rw      file.ReadWriter
 	CfgGen  configGenerator
 	ClogGen changelogGenerator
 }
 
+// NewGenerate creates new Generate.
 func NewGenerate(args ...func(arg *GenerateArgs)) (*Generate, error) {
 	a := &GenerateArgs{
 		Rw: file.NewFS(),

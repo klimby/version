@@ -29,6 +29,7 @@ type runner interface {
 func NewCmd() *Cmd {
 	sO := &stdOutput{}
 	eO := &stdErrOutput{}
+
 	return &Cmd{
 		commandFactory: func(name string, arg ...string) runner {
 			cmd := exec.Command(name, arg...)

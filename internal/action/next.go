@@ -196,7 +196,6 @@ func (n *Next) validate(a PrepareNextArgs) error {
 
 // checkClean checks if the repository is clean.
 func (n *Next) checkClean() error {
-
 	isClean, err := n.repo.IsClean()
 	if err != nil {
 		return err

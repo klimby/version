@@ -8,6 +8,7 @@ import (
 	"github.com/klimby/version/internal/console"
 	"github.com/klimby/version/internal/di"
 	"github.com/klimby/version/internal/git"
+	"github.com/klimby/version/internal/types"
 	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -21,6 +22,11 @@ var nextCmd = &cobra.Command{
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		next := di.C.ActionNext
+		if next == nil {
+			return fmt.Errorf("action next is nil: %w", types.ErrNotInitialized)
+		}
+
 		na := action.PrepareNextArgs{
 			NextType: git.NextNone,
 		}
@@ -79,11 +85,6 @@ var nextCmd = &cobra.Command{
 			}
 		}
 
-		next, err := callNext()
-		if err != nil {
-			return err
-		}
-
 		prepare, err := cmd.Flags().GetBool("prepare")
 		if err != nil {
 			return err
@@ -108,6 +109,12 @@ var nextCmd = &cobra.Command{
 
 // init - init next command.
 func init() {
+	initNextCmd()
+	rootCmd.AddCommand(nextCmd)
+}
+
+// initNextCmd - init next command.
+func initNextCmd() {
 	nextCmd.Flags().Bool("major", false, "next major version")
 	nextCmd.Flags().Bool("minor", false, "next minor version")
 	nextCmd.Flags().Bool("patch", false, "next patch version")
@@ -133,22 +140,4 @@ func init() {
 	viper.SetDefault(config.Force, false)
 
 	config.SetForce()
-
-	rootCmd.AddCommand(nextCmd)
-}
-
-type hasNext interface {
-	Prepare(args ...func(arg *action.PrepareNextArgs)) (version.V, error)
-	Apply(nextV version.V) error
-}
-
-var callNext = func() (hasNext, error) {
-	return action.NewNext(func(args *action.NextArgs) {
-		args.Repo = di.C.Repo()
-		args.ChGen = di.C.Changelog()
-		args.Cfg = di.C.Config()
-		args.F = di.C.FS()
-		args.Bump = di.C.Bump()
-		args.Cmd = di.C.Cmd()
-	})
 }

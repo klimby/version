@@ -92,3 +92,7 @@ func initConfig() {
 		os.Exit(1)
 	}
 }
+
+var callHelp = func(c *cobra.Command) error {
+	return c.Help()
+}

@@ -545,6 +545,7 @@ Flags:
       --major        next major version
       --minor        next minor version
       --patch        next patch version
+      --prepare      run only bump files and commands before
       --ver string   next build version in format 1.2.3
 
 Global Flags:

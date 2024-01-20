@@ -1,8 +1,10 @@
 package cmd
 
 import (
-	"github.com/klimby/version/internal/action"
+	"fmt"
+
 	"github.com/klimby/version/internal/di"
+	"github.com/klimby/version/internal/types"
 	"github.com/spf13/cobra"
 )
 
@@ -14,9 +16,9 @@ var generateCmd = &cobra.Command{
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		gen, err := callGenerator()
-		if err != nil {
-			return err
+		gen := di.C.ActionGenerate
+		if gen == nil {
+			return fmt.Errorf("action generate is nil: %w", types.ErrNotInitialized)
 		}
 
 		c, err := cmd.Flags().GetBool("config-file")
@@ -37,33 +39,18 @@ var generateCmd = &cobra.Command{
 			return gen.Changelog()
 		}
 
-		if !c && !changelog {
-			if err := cmd.Help(); err != nil {
-				return err
-			}
-		}
-
-		return nil
+		return cmd.Help()
 	},
 }
 
 // init - init generate command.
 func init() {
-	generateCmd.Flags().Bool("config-file", false, "generate config file")
-	generateCmd.Flags().Bool("changelog", false, "generate changelog file")
-
+	initGenerateCmd()
 	rootCmd.AddCommand(generateCmd)
 }
 
-type canGenerate interface {
-	Config() error
-	Changelog() error
-}
-
-var callGenerator = func() (canGenerate, error) {
-	return action.NewGenerate(func(arg *action.GenerateArgs) {
-		arg.Rw = di.C.FS()
-		arg.CfgGen = di.C.Config()
-		arg.ClogGen = di.C.Changelog()
-	})
+// initGenerateCmd - init generate command.
+func initGenerateCmd() {
+	generateCmd.Flags().Bool("config-file", false, "generate config file")
+	generateCmd.Flags().Bool("changelog", false, "generate changelog file")
 }
