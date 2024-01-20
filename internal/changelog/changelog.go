@@ -184,8 +184,10 @@ func (g Generator) load(nextV version.V, wr io.Writer) (err error) {
 		}
 	}
 
-	console.Verbose("Changelog changed:")
-	console.Verbose(b.String())
+	if viper.GetBool(config.Verbose) {
+		console.Info("Changelog changed:")
+		console.Info(b.String())
+	}
 
 	return nil
 }
@@ -226,8 +228,10 @@ func (g Generator) rewrite(opt ...func(*git.CommitsArgs)) (err error) {
 		return err
 	}
 
-	console.Verbose("Changelog created:")
-	console.Verbose(b.String())
+	if viper.GetBool(config.Verbose) {
+		console.Info("Changelog created:")
+		console.Info(b.String())
+	}
 
 	if viper.GetBool(config.DryRun) {
 		return nil

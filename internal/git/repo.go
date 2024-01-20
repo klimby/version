@@ -252,37 +252,28 @@ func (r Repository) Add(files ...config.File) error {
 }
 
 // CommitTag stores a tag and commit changes.
-func (r Repository) CommitTag(v version.V) (*Commit, error) {
+func (r Repository) CommitTag(v version.V) error {
 	if viper.GetBool(config.DryRun) {
-		return &Commit{}, nil
+		return nil
 	}
 
 	w, err := r.repo.Worktree()
 	if err != nil {
-		return nil, fmt.Errorf("get worktree error: %w", err)
+		return fmt.Errorf("get worktree error: %w", err)
 	}
 
 	commit, err := w.Commit(fmt.Sprintf("chore(release): %s", v.FormatString()), &git.CommitOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("commit error: %w", err)
+		return fmt.Errorf("commit error: %w", err)
 	}
 
 	if _, err = r.repo.CreateTag(v.GitVersion(), commit, &git.CreateTagOptions{
 		Message: fmt.Sprintf("chore(release): %s", v.FormatString()),
 	}); err != nil {
-		return nil, fmt.Errorf("create tag error: %w", err)
+		return fmt.Errorf("create tag error: %w", err)
 	}
 
-	obj, err := r.repo.CommitObject(commit)
-	if err != nil {
-		return nil, fmt.Errorf("get commit object error: %w", err)
-	}
-
-	cmt := newCommitFromGit(*obj)
-
-	cmt.Version = v
-
-	return &cmt, nil
+	return nil
 }
 
 // CommitsArgs is a Commits options.

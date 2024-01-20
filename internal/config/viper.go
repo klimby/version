@@ -33,6 +33,8 @@ type Options struct {
 	Force                 bool
 	Verbose               bool
 	ConfigFile            string
+
+	TestingSkipDIInit bool
 }
 
 // Init initializes the configuration.
@@ -99,6 +101,10 @@ func Init(opts ...func(options *Options)) {
 
 	if co.Verbose {
 		viper.Set(Verbose, co.Verbose)
+	}
+
+	if co.TestingSkipDIInit {
+		viper.Set(TestingSkipDIInit, co.TestingSkipDIInit)
 	}
 }
 

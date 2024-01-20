@@ -112,14 +112,8 @@ func Test_stdErrOutput_Write(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			stdout := &__fakeWriter{}
-			stderr := &__fakeWriter{}
-
-			SetOutput(func(arg *OutArgs) {
-				arg.Stdout = stdout
-				arg.Stderr = stderr
-				arg.Colorize = false
-			})
+			d := InitTest()
+			defer d()
 
 			s := &stdErrOutput{}
 
@@ -128,7 +122,9 @@ func Test_stdErrOutput_Write(t *testing.T) {
 				t.Errorf("Write() got = %v, want %v", got, tt.want)
 			}
 
-			if got := stderr.p; string(got) != tt.wantStderr {
+			_, stderr := Read()
+
+			if got := stderr; got != tt.wantStderr {
 				t.Errorf("Error() = %v, want %v", got, tt.wantStderr)
 			}
 
@@ -160,16 +156,8 @@ func Test_stdStdOutput_Write(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			stdout := &__fakeWriter{}
-			stderr := &__fakeWriter{}
-
-			SetOutput(func(arg *OutArgs) {
-				arg.Stdout = stdout
-				arg.Stderr = stderr
-				arg.Colorize = false
-			})
+			d := InitTest()
+			defer d()
 
 			s := &stdOutput{}
 
@@ -178,7 +166,9 @@ func Test_stdStdOutput_Write(t *testing.T) {
 				t.Errorf("Write() got = %v, want %v", got, tt.want)
 			}
 
-			if got := stdout.p; string(got) != tt.wantStd {
+			stdout, _ := Read()
+
+			if got := stdout; got != tt.wantStd {
 				t.Errorf("Error() = %v, want %v", got, tt.wantStd)
 			}
 

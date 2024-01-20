@@ -2,6 +2,7 @@ package di
 
 import (
 	"errors"
+	"os"
 
 	"github.com/klimby/version/internal/bump"
 	"github.com/klimby/version/internal/changelog"
@@ -41,6 +42,20 @@ type container struct {
 
 // Init initializes the container.
 func (c *container) Init() error {
+	if viper.GetBool(config.TestingSkipDIInit) {
+		c.IsInit = true
+
+		return nil
+	}
+
+	if !viper.GetBool(config.Silent) {
+		console.Init(func(args *console.OutArgs) {
+			args.Stderr = os.Stderr
+			args.Stdout = os.Stdout
+			args.Colorize = true
+		})
+	}
+
 	if c.IsInit {
 		return errors.New("container is already initialized")
 	}

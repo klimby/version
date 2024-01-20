@@ -1,15 +1,9 @@
 package cmd
 
 import (
-	"fmt"
-
-	"github.com/klimby/version/internal/backup"
-	"github.com/klimby/version/internal/config"
-	"github.com/klimby/version/internal/console"
+	"github.com/klimby/version/internal/action"
 	"github.com/klimby/version/internal/di"
-	"github.com/klimby/version/internal/file"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // generateCmd represents the generate command.
@@ -20,13 +14,18 @@ var generateCmd = &cobra.Command{
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		gen, err := callGenerator()
+		if err != nil {
+			return err
+		}
+
 		c, err := cmd.Flags().GetBool("config-file")
 		if err != nil {
 			return err
 		}
 
 		if c {
-			return generateConfig()
+			return gen.Config()
 		}
 
 		changelog, err := cmd.Flags().GetBool("changelog")
@@ -35,7 +34,7 @@ var generateCmd = &cobra.Command{
 		}
 
 		if changelog {
-			return generateChangelog()
+			return gen.Changelog()
 		}
 
 		if !c && !changelog {
@@ -56,72 +55,15 @@ func init() {
 	rootCmd.AddCommand(generateCmd)
 }
 
-// generateConfigArgs - arguments for generateConfig.
-type generateConfigArgs struct {
-	f file.ReadWriter
-	c generateConfigArgsConfig
+type canGenerate interface {
+	Config() error
+	Changelog() error
 }
 
-// generateConfigArgsConfig - config interface for generateConfig.
-type generateConfigArgsConfig interface {
-	Generate(file.Writer) error
-}
-
-// generateConfig generates config file.
-func generateConfig(opts ...func(options *generateConfigArgs)) error {
-	a := &generateConfigArgs{
-		f: di.C.FS(),
-		c: di.C.Config(),
-	}
-
-	for _, opt := range opts {
-		opt(a)
-	}
-
-	console.Notice("Generate config file...")
-
-	p := config.File(viper.GetString(config.CfgFile))
-
-	if err := backup.Create(a.f, p.Path()); err != nil {
-		return err
-	}
-
-	if err := a.c.Generate(a.f); err != nil {
-		return err
-	}
-
-	console.Success(fmt.Sprintf("Config %s created.", p.String()))
-
-	return nil
-}
-
-// generateChangelogArgs - arguments for generateChangelog.
-type generateChangelogArgs struct {
-	chGen generateChangelogArgsChGen
-}
-
-// generateChangelogArgsChGen - changelog interface for generateChangelog.
-type generateChangelogArgsChGen interface {
-	Generate() error
-}
-
-// generateChangelog generates changelog file.
-func generateChangelog(opts ...func(options *generateChangelogArgs)) error {
-	a := &generateChangelogArgs{
-		chGen: di.C.Changelog(),
-	}
-
-	for _, opt := range opts {
-		opt(a)
-	}
-
-	if !viper.GetBool(config.GenerateChangelog) {
-		console.Info("Changelog generation disabled.")
-
-		return nil
-	}
-
-	console.Notice("Generate changelog...")
-
-	return a.chGen.Generate()
+var callGenerator = func() (canGenerate, error) {
+	return action.NewGenerate(func(arg *action.GenerateArgs) {
+		arg.Rw = di.C.FS()
+		arg.CfgGen = di.C.Config()
+		arg.ClogGen = di.C.Changelog()
+	})
 }

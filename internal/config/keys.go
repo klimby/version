@@ -28,6 +28,11 @@ const (
 	Verbose = "verbose"       // Verbose mode from flags.
 )
 
+// Viper testing keys.
+const (
+	TestingSkipDIInit = "testing.skipDIInit" // Skip DI init. Default: false.
+)
+
 // Default values.
 const (
 	_AppName               = "Version"
