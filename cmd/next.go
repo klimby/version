@@ -121,7 +121,7 @@ func initNextCmd() {
 	nextCmd.Flags().String("ver", "", "next build version in format 1.2.3")
 	nextCmd.MarkFlagsMutuallyExclusive("major", "minor", "patch", "ver")
 
-	nextCmd.Flags().String("prepare", "", "run only bump files and commands before")
+	nextCmd.Flags().Bool("prepare", false, "run only bump files and commands before")
 
 	rootCmd.PersistentFlags().BoolP("backup", "b", false, "backup changed files")
 
