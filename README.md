@@ -1,5 +1,5 @@
 ![MIT license](https://img.shields.io/badge/license-MIT-green.svg?style=plastic "MIT")
-![Version v0.0.0](https://img.shields.io/badge/version-v0.0.0-blue.svg?style=plastic "Version v0.0.0")
+![Version v0.1.1](https://img.shields.io/badge/version-v0.1.1-blue.svg?style=plastic "Version v0.1.1")
 
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
 
@@ -29,6 +29,8 @@ the [Semantic Versioning 2.0.0](https://semver.org) principles. This tool automa
 with [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0) standards, and assists in generating a
 changelog file. It supports version updates in `composer.json`, `package.json`, and other configuration files related to
 versioning.
+
+You can try version utility in [version-test](https://github.com/klimby/version-test) repository.
 
 ## <a id='installation'>Installation</a>
 

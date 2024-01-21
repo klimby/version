@@ -32,8 +32,7 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() error {
-	console.Notice(fmt.Sprintf("CLI tool for versioning Version v%s.", viper.GetString(config.Version)))
-	console.Notice("See https://github.com/klimby/version for more information.\n")
+	rootCmd.Version = viper.GetString(config.Version)
 
 	return rootCmd.Execute()
 }
@@ -91,8 +90,7 @@ func initConfig() {
 		//nolint:revive
 		os.Exit(1)
 	}
-}
 
-var callHelp = func(c *cobra.Command) error {
-	return c.Help()
+	console.Notice(fmt.Sprintf("CLI tool for versioning Version v%s.", viper.GetString(config.Version)))
+	console.Notice("See https://github.com/klimby/version for more information.\n")
 }

@@ -139,4 +139,4 @@ bump:
     start: 0
     end: 5
     regexp:
-      - ^!\[Version:.*$	
+      - ^!\[Version.*$
