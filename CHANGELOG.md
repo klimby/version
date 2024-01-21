@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [Conventional CommitsFromLast](https://www.conventionalcommits.org/en/v1.0.0/) for commit guidelines.
 
+## 1.0.0 (2024-01-21)
+
+### Features
+
+* **actions:** move cmd payload to action ([ef44798](https://github.com/klimby/version/commit/ef44798d0fbccb45b76ab0aabdb6e92b0c1ef96f))
+* **actions:** move cmd payload to action ([1923774](https://github.com/klimby/version/commit/19237744a654dad03ae8c5fd6d55324ed6ee7020))
+
+### Bug Fixes
+
+* **actions:** fix start message ([55f7f46](https://github.com/klimby/version/commit/55f7f46d9b22ff02d1a875a2f3b26c24a8678dd1))
+* **actions:** fix prepare flag ([7e2c40e](https://github.com/klimby/version/commit/7e2c40ec6588c32046eca2a5c0ce26a0a0169639))
+
+### Tests
+
+* **console:** console test ([0008a5f](https://github.com/klimby/version/commit/0008a5fdf8b1677ad9008d3c54802f6103266494))
+* **console:** console test ([94e14c3](https://github.com/klimby/version/commit/94e14c31e14fd2a46d3bec52ef7983186961c0b4))
+
 ## [0.1.0](https://github.com/klimby/version/compare/v0.0.1...v0.1.0) (2024-01-08)
 
 ### Features
