@@ -5,6 +5,8 @@
 
 ![Go](https://img.shields.io/badge/Go-1.21-yellow.svg?style=plastic "Go")
 
+![image info](./img.jpg)
+
 - [Version](#version)
 - [Installation](#installation)
 - [Usage](#usage)
