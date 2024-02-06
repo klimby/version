@@ -132,6 +132,8 @@ func (c C) Generate(f file.Writer) error {
 		}
 	}()
 
+	c.Version = version.V(viper.GetString(Version))
+
 	tmpl, err := template.New("config").Parse(_configYamlTemplate)
 	if err != nil {
 		return fmt.Errorf("parse config template error: %w", err)

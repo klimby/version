@@ -21,11 +21,11 @@ build: ## Build to bin folder
 	$(eval V := $(or $(VERSION),$(PACKAGE_VERSION)))
 	@go build -ldflags "-s -w -X main.version=$(V)" -o ./bin/version github.com/klimby/version
 	@sudo chmod +x ./bin/version
-	@echo "Build created v$(V)"
 
 .PHONY: build-self
 build-self: ## Build to root folder for use in this project
-	go build  -ldflags "-s -w -X main.version=$(PACKAGE_VERSION)" -o . github.com/klimby/version
+	$(eval V := $(or $(VERSION),$(PACKAGE_VERSION)))
+	go build  -ldflags "-s -w -X main.version=$(V)" -o . github.com/klimby/version
 	sudo chmod +x ./version
 
 .PHONY: copy
