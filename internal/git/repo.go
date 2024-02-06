@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -413,6 +414,8 @@ func (r Repository) tags() ([]tagCommit, error) {
 		tags = append(tags, *tC)
 	}
 
+	slices.SortFunc(tags, version.CompareASC[tagCommit])
+
 	return tags, nil
 }
 
@@ -536,4 +539,9 @@ type tagCommit struct {
 // String returns a tag string.
 func (t tagCommit) String() string {
 	return t.commitHash[:7] + " | " + t.ver.GitVersion()
+}
+
+// Version returns a tag version.
+func (t tagCommit) Version() version.V {
+	return t.ver
 }

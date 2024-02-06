@@ -26,7 +26,7 @@ build: ## Build to bin folder
 .PHONY: build-self
 build-self: ## Build to root folder for use in this project
 	go build  -ldflags "-s -w -X main.version=$(PACKAGE_VERSION)" -o . github.com/klimby/version
-	sudo chmod +x ./bin/version
+	sudo chmod +x ./version
 
 .PHONY: copy
 copy: ## Copy from bin folder to root folder for use in this project
