@@ -119,7 +119,8 @@ func (r Repository) AddModified() error {
 	}
 
 	for path, s := range st {
-		if s.Worktree == git.Modified || s.Staging == git.Added {
+		if s.Worktree == git.Modified || s.Staging == git.Modified || s.Staging == git.Added || s.Staging == git.Deleted || s.Staging == git.Renamed || s.Staging == git.Copied {
+			//			if s.Worktree == git.Modified || s.Staging == git.Added {
 			if err := w.AddWithOptions(&git.AddOptions{
 				Path: path,
 			}); err != nil {
