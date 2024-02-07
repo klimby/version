@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [Conventional CommitsFromLast](https://www.conventionalcommits.org/en/v1.0.0/) for commit guidelines.
 
+## 1.0.4 (2024-02-07)
+
+### Bug Fixes
+
+* **repo:** fix changelog issue link ([a20f0cd](https://github.com/klimby/version/commit/a20f0cd8d3b7481df30c43702e98043bc6d62641))
+
 ## 1.0.3 (2024-02-07)
 
 ### Bug Fixes
