@@ -302,7 +302,9 @@ func (r Repository) Commits(opt ...func(options *CommitsArgs)) ([]Commit, error)
 		return nil, err
 	}
 
-	commits, err := r.repo.Log(&git.LogOptions{})
+	commits, err := r.repo.Log(&git.LogOptions{
+		Order: git.LogOrderCommitterTime,
+	})
 	if err != nil {
 		return nil, err
 	}
