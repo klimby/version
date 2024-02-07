@@ -163,7 +163,7 @@ func commitName() func(c commitTpl) string {
 // addIssueURL returns a commit message with issue URL in template.
 func addIssueURL() func(s string) string {
 	issueURL := viper.GetString(config.ChangelogIssueURL)
-	re := regexp.MustCompile(`#\w+`)
+	re := regexp.MustCompile(`#\S*`)
 
 	return func(s string) string {
 		if issueURL == "" {
