@@ -23,7 +23,6 @@ build: ## Build to bin folder
 	@sudo chmod +x ./bin/version
 	@echo "Build created v$(V)"
 	@./bin/version --version
-	@cp ./bin/version ./
 
 .PHONY: build-self
 build-self: ## Build to root folder for use in this project

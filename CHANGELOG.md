@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [Conventional CommitsFromLast](https://www.conventionalcommits.org/en/v1.0.0/) for commit guidelines.
 
+## 1.0.6 (2024-02-08)
+
+### Bug Fixes
+
+* **repo:** nil tag collision ([0f46a41](https://github.com/klimby/version/commit/0f46a415ccb45b4e130baa0b73774581fc2f2f93))
+* **repo:** nil tag collision ([18b5374](https://github.com/klimby/version/commit/18b5374f6f4bb3ac1abedb0570c0267bb2816534))
+
+### Documentation
+
+* **readme:** correct README.md ([e892524](https://github.com/klimby/version/commit/e892524fb5da0e5461644f40c4945e8642d2ac1a))
+
 ## 1.0.5 (2024-02-07)
 
 ### Bug Fixes
