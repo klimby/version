@@ -39,6 +39,16 @@ You can try version utility in [version-test](https://github.com/klimby/version-
 ```bash
 wget https://raw.githubusercontent.com/klimby/version/master/bin/version -O version 
 
+chmod +x ./version
+
+```
+
+or
+
+```bash
+curl -o version https://raw.githubusercontent.com/klimby/version/master/bin/version
+
+
 sudo chmod +x ./version
 ```
 
