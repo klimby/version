@@ -21,6 +21,9 @@ build: ## Build to bin folder
 	$(eval V := $(or $(VERSION),$(PACKAGE_VERSION)))
 	@go build -ldflags "-s -w -X main.version=$(V)" -o ./bin/version github.com/klimby/version
 	@sudo chmod +x ./bin/version
+	@echo "Build created v$(V)"
+	@./bin/version --version
+	@cp ./bin/version ./
 
 .PHONY: build-self
 build-self: ## Build to root folder for use in this project
@@ -43,8 +46,3 @@ minor: ## Minor version
 .PHONY: major
 major: ## Major version
 	./version next --major
-
-.PHONY: p
-p: ## Build to bin folder
-	$(eval V := $(or $(VERSION),$(PACKAGE_VERSION)))
-	@echo "Version is $(V)"
