@@ -280,8 +280,9 @@ func (r Repository) CommitTag(v version.V) error {
 
 // CommitsArgs is a Commits options.
 type CommitsArgs struct {
-	NextV    version.V
-	LastOnly bool
+	NextV         version.V
+	LastOnly      bool
+	IncludeMerges bool
 }
 
 // Commits returns commits.
@@ -290,8 +291,9 @@ type CommitsArgs struct {
 // If nextV is not set, then will be returned all commits.
 func (r Repository) Commits(opt ...func(options *CommitsArgs)) ([]Commit, error) {
 	a := &CommitsArgs{
-		NextV:    version.V(""),
-		LastOnly: false,
+		NextV:         version.V(""),
+		LastOnly:      false,
+		IncludeMerges: false,
 	}
 
 	for _, o := range opt {
@@ -342,6 +344,10 @@ func (r Repository) Commits(opt ...func(options *CommitsArgs)) ([]Commit, error)
 
 		if a.LastOnly && cmt.IsTag() {
 			break
+		}
+
+		if !a.IncludeMerges && cmt.IsMerge {
+			continue
 		}
 
 		cs = append(cs, cmt)
@@ -485,16 +491,21 @@ type Commit struct {
 	Date time.Time
 	// Email is an user email.
 	Email string
+	// IsMerge is a merge flag.
+	IsMerge bool
 }
 
 // newCommitFromGit returns a new Commit.
 func newCommitFromGit(c object.Commit) Commit {
+	isMerge := strings.HasPrefix(c.Message, "Merge")
+
 	return Commit{
 		Hash:    c.Hash.String(),
 		Message: c.Message,
 		Date:    c.Author.When,
 		Author:  c.Author.Name,
 		Email:   c.Author.Email,
+		IsMerge: isMerge,
 	}
 }
 
