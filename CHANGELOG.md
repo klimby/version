@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [Conventional CommitsFromLast](https://www.conventionalcommits.org/en/v1.0.0/) for commit guidelines.
 
+## 1.0.7 (2024-02-08)
+
+### Features
+
+* **repo:** exclude merge commits ([41e97fc](https://github.com/klimby/version/commit/41e97fcaf96400b191a4accceccf37b7a4ddd3d8))
+
 ## 1.0.6 (2024-02-08)
 
 ### Bug Fixes
