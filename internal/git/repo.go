@@ -414,7 +414,9 @@ func (r Repository) tags() ([]tagCommit, error) {
 
 		tC := r.tagCommitFromRef(tagRef)
 
-		tags = append(tags, *tC)
+		if tC != nil {
+			tags = append(tags, *tC)
+		}
 	}
 
 	slices.SortFunc(tags, version.CompareASC[tagCommit])
