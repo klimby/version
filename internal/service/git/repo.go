@@ -140,13 +140,18 @@ func (r Repository) RemoteURL() (string, error) {
 		return "", fmt.Errorf("get remotes error: %w", err)
 	}
 
+	// git@github.com:Atmsys/docker-hub.git - var 1.
+	// ssh://git@github.com/klimby/version-test.git  - var 2.
 	reg := regexp.MustCompile(`^.+(github\.com.+).git$`)
 
 	for _, rm := range rem {
 		matches := reg.FindStringSubmatch(rm.Config().URLs[0])
 
 		if len(matches) == 2 {
-			return "https://" + matches[1], nil
+			// change : to / for GitHub variant 1.
+			m := strings.ReplaceAll(matches[1], ":", "/")
+
+			return "https://" + m, nil
 		}
 	}
 
