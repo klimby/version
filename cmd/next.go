@@ -5,9 +5,10 @@ import (
 
 	"github.com/klimby/version/internal/action"
 	"github.com/klimby/version/internal/config"
-	"github.com/klimby/version/internal/console"
+	"github.com/klimby/version/internal/config/key"
 	"github.com/klimby/version/internal/di"
-	"github.com/klimby/version/internal/git"
+	"github.com/klimby/version/internal/service/console"
+	"github.com/klimby/version/internal/service/git"
 	"github.com/klimby/version/internal/types"
 	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/cobra"
@@ -125,19 +126,19 @@ func initNextCmd() {
 
 	rootCmd.PersistentFlags().BoolP("backup", "b", false, "backup changed files")
 
-	if err := viper.BindPFlag(config.Backup, rootCmd.PersistentFlags().Lookup("backup")); err != nil {
-		viper.Set(config.Backup, false)
+	if err := viper.BindPFlag(key.Backup, rootCmd.PersistentFlags().Lookup("backup")); err != nil {
+		viper.Set(key.Backup, false)
 	}
 
-	viper.SetDefault(config.Backup, false)
+	viper.SetDefault(key.Backup, false)
 
 	rootCmd.PersistentFlags().BoolP("force", "f", false, "force mode")
 
-	if err := viper.BindPFlag(config.Force, rootCmd.PersistentFlags().Lookup("force")); err != nil {
-		viper.Set(config.Force, false)
+	if err := viper.BindPFlag(key.Force, rootCmd.PersistentFlags().Lookup("force")); err != nil {
+		viper.Set(key.Force, false)
 	}
 
-	viper.SetDefault(config.Force, false)
+	viper.SetDefault(key.Force, false)
 
 	config.SetForce()
 }

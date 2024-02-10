@@ -10,7 +10,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/klimby/version/internal/file"
+	"github.com/klimby/version/internal/config/key"
+	"github.com/klimby/version/internal/service/fsys"
 	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
@@ -44,30 +45,30 @@ type C struct {
 }
 
 // newConfig returns a new configuration.
-func newConfig(f file.Reader) (_ C, err error) {
+func newConfig(f fsys.Reader) (_ C, err error) {
 	c := C{
-		Version: version.V(viper.GetString(Version)),
-		Backup:  viper.GetBool(Backup),
+		Version: version.V(viper.GetString(key.Version)),
+		Backup:  viper.GetBool(key.Backup),
 		Before:  []Command{},
 		After:   []Command{},
 		GitOptions: gitOptions{
-			AllowCommitDirty:      viper.GetBool(AllowCommitDirty),
-			AutoGenerateNextPatch: viper.GetBool(AutoGenerateNextPatch),
-			AllowDowngrades:       viper.GetBool(AllowDowngrades),
-			RemoteURL:             viper.GetString(RemoteURL),
+			AllowCommitDirty:      viper.GetBool(key.AllowCommitDirty),
+			AutoGenerateNextPatch: viper.GetBool(key.AutoGenerateNextPatch),
+			AllowDowngrades:       viper.GetBool(key.AllowDowngrades),
+			RemoteURL:             viper.GetString(key.RemoteURL),
 		},
 		ChangelogOptions: changelogOptions{
-			Generate:    viper.GetBool(GenerateChangelog),
-			FileName:    File(viper.GetString(ChangelogFileName)),
-			Title:       viper.GetString(ChangelogTitle),
-			IssueURL:    viper.GetString(ChangelogIssueURL),
-			ShowAuthor:  viper.GetBool(ChangelogShowAuthor),
-			ShowBody:    viper.GetBool(ChangelogShowBody),
+			Generate:    viper.GetBool(key.GenerateChangelog),
+			FileName:    fsys.File(viper.GetString(key.ChangelogFileName)),
+			Title:       viper.GetString(key.ChangelogTitle),
+			IssueURL:    viper.GetString(key.ChangelogIssueURL),
+			ShowAuthor:  viper.GetBool(key.ChangelogShowAuthor),
+			ShowBody:    viper.GetBool(key.ChangelogShowBody),
 			CommitTypes: _defaultCommitNames,
 		},
 	}
 
-	cfg := File(viper.GetString(CfgFile))
+	cfg := fsys.File(viper.GetString(key.CfgFile))
 
 	r, err := f.Read(cfg.Path())
 	if err != nil {
@@ -116,8 +117,8 @@ func (c C) CommitTypes() []CommitName {
 }
 
 // Generate generates the configuration file.
-func (c C) Generate(f file.Writer) error {
-	p := File(viper.GetString(CfgFile))
+func (c C) Generate(f fsys.Writer) error {
+	p := fsys.File(viper.GetString(key.CfgFile))
 
 	w, err := f.Write(p.Path(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC)
 	if err != nil {
@@ -132,7 +133,8 @@ func (c C) Generate(f file.Writer) error {
 		}
 	}()
 
-	c.Version = version.V(viper.GetString(Version))
+	//nolint:revive
+	c.Version = version.V(viper.GetString(key.Version))
 
 	tmpl, err := template.New("config").Parse(_configYamlTemplate)
 	if err != nil {
@@ -254,7 +256,7 @@ type changelogOptions struct {
 	// Generate is a flag that indicates that the changelog is generated.
 	Generate bool `yaml:"generate"`
 	// FileName is a changelog file name.
-	FileName File `yaml:"file"`
+	FileName fsys.File `yaml:"file"`
 	// Title is a changelog title.
 	Title string `yaml:"title"`
 	// Issue href template.
@@ -273,7 +275,7 @@ func (c changelogOptions) validate() error {
 		return nil
 	}
 
-	if c.FileName.empty() || c.FileName.IsAbs() {
+	if c.FileName.Empty() || c.FileName.IsAbs() {
 		return fmt.Errorf(`%w: changelog file name is empty or absolute path`, errConfig)
 	}
 
@@ -289,7 +291,7 @@ func (c changelogOptions) validate() error {
 // BumpFile is a file for bump.
 type BumpFile struct {
 	// File path.
-	File File `yaml:"file"`
+	File fsys.File `yaml:"file"`
 	// RegExp for string for search version.
 	// If not will be found version regexp in strings from start to end.
 	RegExp []string `yaml:"regexp"`

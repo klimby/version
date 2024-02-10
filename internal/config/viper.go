@@ -4,7 +4,8 @@ import (
 	"errors"
 	"net/url"
 
-	"github.com/klimby/version/internal/file"
+	"github.com/klimby/version/internal/config/key"
+	"github.com/klimby/version/internal/service/fsys"
 	"github.com/spf13/viper"
 )
 
@@ -60,80 +61,80 @@ func Init(opts ...func(options *Options)) {
 		opt(co)
 	}
 
-	viper.Set(appName, _AppName)
-	viper.Set(Version, co.Version)
+	viper.Set(key.AppName, _AppName)
+	viper.Set(key.Version, co.Version)
 
 	if co.WorkDir != "" {
-		viper.Set(WorkDir, co.WorkDir)
+		viper.Set(key.WorkDir, co.WorkDir)
 	}
 
-	viper.Set(AllowCommitDirty, co.AllowCommitDirty)
-	viper.Set(AutoGenerateNextPatch, co.AutoGenerateNextPatch)
-	viper.Set(AllowDowngrades, co.AllowDowngrades)
+	viper.Set(key.AllowCommitDirty, co.AllowCommitDirty)
+	viper.Set(key.AutoGenerateNextPatch, co.AutoGenerateNextPatch)
+	viper.Set(key.AllowDowngrades, co.AllowDowngrades)
 
-	viper.Set(GenerateChangelog, co.GenerateChangelog)
-	viper.Set(ChangelogFileName, co.ChangelogFileName)
-	viper.Set(ChangelogTitle, co.ChangelogTitle)
-	viper.Set(ChangelogIssueURL, co.ChangelogIssueHref)
-	viper.Set(ChangelogShowAuthor, co.ChangelogShowAuthor)
-	viper.Set(ChangelogShowBody, co.ChangelogShowBody)
+	viper.Set(key.GenerateChangelog, co.GenerateChangelog)
+	viper.Set(key.ChangelogFileName, co.ChangelogFileName)
+	viper.Set(key.ChangelogTitle, co.ChangelogTitle)
+	viper.Set(key.ChangelogIssueURL, co.ChangelogIssueHref)
+	viper.Set(key.ChangelogShowAuthor, co.ChangelogShowAuthor)
+	viper.Set(key.ChangelogShowBody, co.ChangelogShowBody)
 
 	if co.ConfigFile != DefaultConfigFile {
-		viper.Set(CfgFile, co.ConfigFile)
+		viper.Set(key.CfgFile, co.ConfigFile)
 	}
 
 	if co.Force {
-		viper.Set(Force, co.Force)
+		viper.Set(key.Force, co.Force)
 		SetForce()
 	}
 
 	if co.Silent {
-		viper.Set(Silent, co.Silent)
+		viper.Set(key.Silent, co.Silent)
 	}
 
 	if co.DryRun {
-		viper.Set(DryRun, co.DryRun)
+		viper.Set(key.DryRun, co.DryRun)
 	}
 
 	if co.Backup {
-		viper.Set(Backup, co.Backup)
+		viper.Set(key.Backup, co.Backup)
 	}
 
 	if co.Verbose {
-		viper.Set(Verbose, co.Verbose)
+		viper.Set(key.Verbose, co.Verbose)
 	}
 
 	if co.TestingSkipDIInit {
-		viper.Set(TestingSkipDIInit, co.TestingSkipDIInit)
+		viper.Set(key.TestingSkipDIInit, co.TestingSkipDIInit)
 	}
 }
 
 // SetForce sets force mode.
 func SetForce() {
-	if viper.GetBool(Force) {
-		viper.Set(AllowCommitDirty, true)
-		viper.Set(AutoGenerateNextPatch, true)
-		viper.Set(AllowDowngrades, true)
+	if viper.GetBool(key.Force) {
+		viper.Set(key.AllowCommitDirty, true)
+		viper.Set(key.AutoGenerateNextPatch, true)
+		viper.Set(key.AllowDowngrades, true)
 	}
 }
 
 // SetURLFromGit sets the remote repository URL from git.
 func SetURLFromGit(u string) {
 	if u != "" {
-		viper.Set(RemoteURL, u)
+		viper.Set(key.RemoteURL, u)
 
 		iU, err := url.JoinPath(u, "/issues/")
 		if err != nil {
 			return
 		}
 
-		viper.Set(ChangelogIssueURL, iU)
+		viper.Set(key.ChangelogIssueURL, iU)
 	}
 }
 
 // Load loads the configuration from config.yaml.
 // Run after config.Init() in main.go.
-func Load(f file.Reader) (C, error) {
+func Load(f fsys.Reader) (C, error) {
 	c, err := newConfig(f)
 	if err != nil {
 		return c, err
@@ -141,33 +142,33 @@ func Load(f file.Reader) (C, error) {
 
 	if c.IsFileConfig {
 		if c.GitOptions.AllowCommitDirty {
-			viper.Set(AllowCommitDirty, c.GitOptions.AllowCommitDirty)
+			viper.Set(key.AllowCommitDirty, c.GitOptions.AllowCommitDirty)
 		}
 
 		if c.GitOptions.AutoGenerateNextPatch {
-			viper.Set(AutoGenerateNextPatch, c.GitOptions.AutoGenerateNextPatch)
+			viper.Set(key.AutoGenerateNextPatch, c.GitOptions.AutoGenerateNextPatch)
 		}
 
 		if c.GitOptions.AllowDowngrades {
-			viper.Set(AllowDowngrades, c.GitOptions.AllowDowngrades)
+			viper.Set(key.AllowDowngrades, c.GitOptions.AllowDowngrades)
 		}
 
-		viper.Set(GenerateChangelog, c.ChangelogOptions.Generate)
-		viper.Set(ChangelogFileName, c.ChangelogOptions.FileName)
-		viper.Set(ChangelogTitle, c.ChangelogOptions.Title)
-		viper.Set(ChangelogShowAuthor, c.ChangelogOptions.ShowAuthor)
-		viper.Set(ChangelogShowBody, c.ChangelogOptions.ShowBody)
+		viper.Set(key.GenerateChangelog, c.ChangelogOptions.Generate)
+		viper.Set(key.ChangelogFileName, c.ChangelogOptions.FileName)
+		viper.Set(key.ChangelogTitle, c.ChangelogOptions.Title)
+		viper.Set(key.ChangelogShowAuthor, c.ChangelogOptions.ShowAuthor)
+		viper.Set(key.ChangelogShowBody, c.ChangelogOptions.ShowBody)
 
 		if c.Backup {
-			viper.Set(Backup, c.Backup)
+			viper.Set(key.Backup, c.Backup)
 		}
 
 		if c.ChangelogOptions.IssueURL != "" {
-			viper.Set(ChangelogIssueURL, c.ChangelogOptions.IssueURL)
+			viper.Set(key.ChangelogIssueURL, c.ChangelogOptions.IssueURL)
 		}
 
 		if c.GitOptions.RemoteURL != "" {
-			viper.Set(RemoteURL, c.GitOptions.RemoteURL)
+			viper.Set(key.RemoteURL, c.GitOptions.RemoteURL)
 		}
 	}
 

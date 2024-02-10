@@ -5,7 +5,8 @@ import (
 	"strings"
 
 	"github.com/klimby/version/internal/config"
-	"github.com/klimby/version/internal/git"
+	"github.com/klimby/version/internal/config/key"
+	"github.com/klimby/version/internal/service/git"
 	"github.com/klimby/version/pkg/convert"
 	"github.com/spf13/viper"
 )
@@ -53,7 +54,7 @@ func newCommitTpl(gc git.Commit) commitTpl {
 
 	spl := strings.Split(m.source, "\n")
 
-	showBody := viper.GetBool(config.ChangelogShowBody)
+	showBody := viper.GetBool(key.ChangelogShowBody)
 
 	matches := _titleRegexp.FindStringSubmatch(spl[0])
 

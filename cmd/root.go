@@ -6,8 +6,9 @@ import (
 	"os"
 
 	"github.com/klimby/version/internal/config"
-	"github.com/klimby/version/internal/console"
+	"github.com/klimby/version/internal/config/key"
 	"github.com/klimby/version/internal/di"
+	"github.com/klimby/version/internal/service/console"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -32,7 +33,7 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() error {
-	rootCmd.Version = viper.GetString(config.Version)
+	rootCmd.Version = viper.GetString(key.Version)
 
 	return rootCmd.Execute()
 }
@@ -42,43 +43,43 @@ func init() {
 
 	rootCmd.PersistentFlags().BoolP("silent", "s", false, "silent run")
 
-	if err := viper.BindPFlag(config.Silent, rootCmd.PersistentFlags().Lookup("silent")); err != nil {
-		viper.Set(config.Silent, false)
+	if err := viper.BindPFlag(key.Silent, rootCmd.PersistentFlags().Lookup("silent")); err != nil {
+		viper.Set(key.Silent, false)
 	}
 
-	viper.SetDefault(config.Silent, false)
+	viper.SetDefault(key.Silent, false)
 
 	rootCmd.PersistentFlags().BoolP("dry", "d", false, "dry run")
 
-	if err := viper.BindPFlag(config.DryRun, rootCmd.PersistentFlags().Lookup("dry")); err != nil {
-		viper.Set(config.DryRun, false)
+	if err := viper.BindPFlag(key.DryRun, rootCmd.PersistentFlags().Lookup("dry")); err != nil {
+		viper.Set(key.DryRun, false)
 	}
 
-	viper.SetDefault(config.DryRun, false)
+	viper.SetDefault(key.DryRun, false)
 
 	rootCmd.PersistentFlags().StringP("config", "c", config.DefaultConfigFile, "config file path")
 
-	if err := viper.BindPFlag(config.CfgFile, rootCmd.PersistentFlags().Lookup("config-file")); err != nil {
-		viper.Set(config.CfgFile, config.DefaultConfigFile)
+	if err := viper.BindPFlag(key.CfgFile, rootCmd.PersistentFlags().Lookup("config-file")); err != nil {
+		viper.Set(key.CfgFile, config.DefaultConfigFile)
 	}
 
-	viper.SetDefault(config.CfgFile, config.DefaultConfigFile)
+	viper.SetDefault(key.CfgFile, config.DefaultConfigFile)
 
 	rootCmd.PersistentFlags().String("dir", "", "working directory, default - current")
 
-	if err := viper.BindPFlag(config.WorkDir, rootCmd.PersistentFlags().Lookup("dir")); err != nil {
-		viper.Set(config.WorkDir, "")
+	if err := viper.BindPFlag(key.WorkDir, rootCmd.PersistentFlags().Lookup("dir")); err != nil {
+		viper.Set(key.WorkDir, "")
 	}
 
-	viper.SetDefault(config.WorkDir, "")
+	viper.SetDefault(key.WorkDir, "")
 
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "verbose output")
 
-	if err := viper.BindPFlag(config.Verbose, rootCmd.PersistentFlags().Lookup("verbose")); err != nil {
-		viper.Set(config.Verbose, false)
+	if err := viper.BindPFlag(key.Verbose, rootCmd.PersistentFlags().Lookup("verbose")); err != nil {
+		viper.Set(key.Verbose, false)
 	}
 
-	viper.SetDefault(config.Verbose, false)
+	viper.SetDefault(key.Verbose, false)
 }
 
 // initConfig reads in config file and initializes di.
@@ -91,6 +92,6 @@ func initConfig() {
 		os.Exit(1)
 	}
 
-	console.Notice(fmt.Sprintf("CLI tool for versioning Version v%s.", viper.GetString(config.Version)))
+	console.Notice(fmt.Sprintf("CLI tool for versioning Version v%s.", viper.GetString(key.Version)))
 	console.Notice("See https://github.com/klimby/version for more information.\n")
 }

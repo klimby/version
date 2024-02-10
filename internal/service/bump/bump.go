@@ -6,10 +6,11 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/klimby/version/internal/backup"
 	"github.com/klimby/version/internal/config"
-	"github.com/klimby/version/internal/console"
-	"github.com/klimby/version/internal/file"
+	"github.com/klimby/version/internal/config/key"
+	"github.com/klimby/version/internal/service/backup"
+	"github.com/klimby/version/internal/service/console"
+	"github.com/klimby/version/internal/service/fsys"
 	"github.com/klimby/version/pkg/convert"
 	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/viper"
@@ -17,24 +18,24 @@ import (
 
 // B bump files by version.
 type B struct {
-	rw   file.ReadWriter
+	rw   fsys.ReadWriter
 	repo gitRepo
 }
 
 type gitRepo interface {
-	Add(files ...config.File) error
+	Add(files ...fsys.File) error
 }
 
 // Args is a Bump arguments.
 type Args struct {
-	RW   file.ReadWriter
+	RW   fsys.ReadWriter
 	Repo gitRepo
 }
 
 // New creates new Bump.
 func New(args ...func(arg *Args)) *B {
 	a := &Args{
-		RW: file.NewFS(),
+		RW: fsys.NewFS(),
 	}
 
 	for _, arg := range args {
@@ -104,7 +105,7 @@ func (b B) applyToFile(bmp config.BumpFile, v version.V) (bool, error) {
 		return false, nil
 	}
 
-	if !viper.GetBool(config.DryRun) {
+	if !viper.GetBool(key.DryRun) {
 		if err := b.write(bmp.File.Path(), content); err != nil {
 			return false, fmt.Errorf("write file %s error: %w", bmp.File.String(), err)
 		}

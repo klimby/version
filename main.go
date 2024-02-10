@@ -5,7 +5,7 @@ import (
 
 	"github.com/klimby/version/cmd"
 	"github.com/klimby/version/internal/config"
-	"github.com/klimby/version/internal/console"
+	"github.com/klimby/version/internal/service/console"
 )
 
 // -ldflags "-X main.version=$VERSION"

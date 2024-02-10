@@ -10,11 +10,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/klimby/version/internal/backup"
 	"github.com/klimby/version/internal/config"
-	"github.com/klimby/version/internal/console"
-	"github.com/klimby/version/internal/file"
-	"github.com/klimby/version/internal/git"
+	"github.com/klimby/version/internal/config/key"
+	"github.com/klimby/version/internal/service/backup"
+	"github.com/klimby/version/internal/service/console"
+	"github.com/klimby/version/internal/service/fsys"
+	"github.com/klimby/version/internal/service/git"
 	"github.com/klimby/version/pkg/convert"
 	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/viper"
@@ -28,8 +29,8 @@ var (
 // Generator generates changelog.
 type Generator struct {
 	repo gitRepo
-	rw   file.ReadWriter
-	f    config.File
+	rw   fsys.ReadWriter
+	f    fsys.File
 	nms  []config.CommitName
 }
 
@@ -42,22 +43,22 @@ type gitRepo interface {
 	Commits(...func(options *git.CommitsArgs)) ([]git.Commit, error)
 
 	// Add adds files to git.
-	Add(files ...config.File) error
+	Add(files ...fsys.File) error
 }
 
 // Args is a Generator arguments.
 type Args struct {
 	Repo        gitRepo
-	RW          file.ReadWriter
-	ConfigFile  config.File
+	RW          fsys.ReadWriter
+	ConfigFile  fsys.File
 	CommitNames []config.CommitName
 }
 
 // New creates new Generator.
 func New(args ...func(arg *Args)) *Generator {
 	a := &Args{
-		RW:         file.NewFS(),
-		ConfigFile: config.File(viper.GetString(config.ChangelogFileName)),
+		RW:         fsys.NewFS(),
+		ConfigFile: fsys.File(viper.GetString(key.ChangelogFileName)),
 	}
 
 	for _, arg := range args {
@@ -94,7 +95,7 @@ func (g Generator) Add(nextV version.V) (err error) {
 		return err
 	}
 
-	if viper.GetBool(config.DryRun) {
+	if viper.GetBool(key.DryRun) {
 		return nil
 	}
 
@@ -184,7 +185,7 @@ func (g Generator) load(nextV version.V, wr io.Writer) (err error) {
 		}
 	}
 
-	if viper.GetBool(config.Verbose) {
+	if viper.GetBool(key.Verbose) {
 		console.Info("Changelog changed:")
 		console.Info(b.String())
 	}
@@ -219,7 +220,7 @@ func (g Generator) rewrite(opt ...func(*git.CommitsArgs)) (err error) {
 	}
 
 	var b strings.Builder
-	b.WriteString("# " + viper.GetString(config.ChangelogTitle) + "\n\n")
+	b.WriteString("# " + viper.GetString(key.ChangelogTitle) + "\n\n")
 
 	b.WriteString("All notable changes to this project will be documented in this file. ")
 	b.WriteString("See [Conventional CommitsFromLast](https://www.conventionalcommits.org/en/v1.0.0/) for commit guidelines.\n")
@@ -228,12 +229,12 @@ func (g Generator) rewrite(opt ...func(*git.CommitsArgs)) (err error) {
 		return err
 	}
 
-	if viper.GetBool(config.Verbose) {
+	if viper.GetBool(key.Verbose) {
 		console.Info("Changelog created:")
 		console.Info(b.String())
 	}
 
-	if viper.GetBool(config.DryRun) {
+	if viper.GetBool(key.DryRun) {
 		return nil
 	}
 

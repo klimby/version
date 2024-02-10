@@ -3,24 +3,24 @@ package action
 import (
 	"fmt"
 
-	"github.com/klimby/version/internal/backup"
-	"github.com/klimby/version/internal/config"
-	"github.com/klimby/version/internal/console"
-	"github.com/klimby/version/internal/file"
+	"github.com/klimby/version/internal/config/key"
+	"github.com/klimby/version/internal/service/backup"
+	"github.com/klimby/version/internal/service/console"
+	"github.com/klimby/version/internal/service/fsys"
 	"github.com/klimby/version/internal/types"
 	"github.com/spf13/viper"
 )
 
 // Generate - generate action.
 type Generate struct {
-	rw      file.ReadWriter
+	rw      fsys.ReadWriter
 	cfgGen  configGenerator
 	clogGen changelogGenerator
 }
 
 // configGenerator - config generator interface.
 type configGenerator interface {
-	Generate(file.Writer) error
+	Generate(fsys.Writer) error
 }
 
 // changelogGenerator - changelog generator interface.
@@ -30,7 +30,7 @@ type changelogGenerator interface {
 
 // GenerateArgs - arguments for Generate.
 type GenerateArgs struct {
-	Rw      file.ReadWriter
+	Rw      fsys.ReadWriter
 	CfgGen  configGenerator
 	ClogGen changelogGenerator
 }
@@ -38,7 +38,7 @@ type GenerateArgs struct {
 // NewGenerate creates new Generate.
 func NewGenerate(args ...func(arg *GenerateArgs)) (*Generate, error) {
 	a := &GenerateArgs{
-		Rw: file.NewFS(),
+		Rw: fsys.NewFS(),
 	}
 
 	for _, arg := range args {
@@ -64,7 +64,7 @@ func NewGenerate(args ...func(arg *GenerateArgs)) (*Generate, error) {
 func (g *Generate) Config() error {
 	console.Notice("Generate config file...")
 
-	p := config.File(viper.GetString(config.CfgFile))
+	p := fsys.File(viper.GetString(key.CfgFile))
 
 	if err := backup.Create(g.rw, p.Path()); err != nil {
 		return err
@@ -81,7 +81,7 @@ func (g *Generate) Config() error {
 
 // Changelog generates changelog file.
 func (g *Generate) Changelog() error {
-	if !viper.GetBool(config.GenerateChangelog) {
+	if !viper.GetBool(key.GenerateChangelog) {
 		console.Info("Changelog generation disabled.")
 
 		return nil

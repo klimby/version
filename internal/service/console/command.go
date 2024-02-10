@@ -2,44 +2,51 @@ package console
 
 import (
 	"fmt"
-	"io"
+	"os"
 	"os/exec"
 	"strings"
 
-	"github.com/klimby/version/pkg/convert"
+	"github.com/klimby/version/internal/config/key"
+	"github.com/spf13/viper"
 )
 
 // Cmd is a command runner.
 type Cmd struct {
 	commandFactory func(name string, arg ...string) runner
-	stdout         io.Writer
-	stderr         errorWriter
-}
-
-type errorWriter interface {
-	io.Writer
-	isError() bool
 }
 
 type runner interface {
 	Run() error
 }
 
-// NewCmd creates new Cmd.
-func NewCmd() *Cmd {
-	sO := &stdOutput{}
-	eO := &stdErrOutput{}
+// CmdArgs - command options.
+type CmdArgs struct {
+	CF func(name string, arg ...string) runner
+}
 
-	return &Cmd{
-		commandFactory: func(name string, arg ...string) runner {
+// NewCmd creates new Cmd.
+func NewCmd(args ...func(*CmdArgs)) *Cmd {
+	options := CmdArgs{
+		CF: func(name string, arg ...string) runner {
 			cmd := exec.Command(name, arg...)
-			cmd.Stdout = sO
-			cmd.Stderr = eO
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+
+			wd := viper.GetString(key.WorkDir)
+			if wd != "." && wd != "" {
+				cmd.Dir = wd
+			}
 
 			return cmd
 		},
-		stdout: sO,
-		stderr: eO,
+	}
+
+	for _, opt := range args {
+		opt(&options)
+	}
+
+	return &Cmd{
+		commandFactory: options.CF,
 	}
 }
 
@@ -56,10 +63,6 @@ func (c *Cmd) Run(name string, arg ...string) error {
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("could not run command %s: %w", n, err)
-	}
-
-	if c.stderr.isError() {
-		return fmt.Errorf("command %s run error", n)
 	}
 
 	return nil
@@ -99,27 +102,4 @@ func commandString(name string, arg ...string) string {
 	}
 
 	return b.String()
-}
-
-type stdErrOutput struct {
-	isErr bool
-}
-
-func (s *stdErrOutput) isError() bool {
-	return s.isErr
-}
-
-func (s *stdErrOutput) Write(p []byte) (int, error) {
-	Error(convert.B2S(p))
-	s.isErr = true
-
-	return len(p), nil
-}
-
-type stdOutput struct{}
-
-func (stdOutput) Write(p []byte) (int, error) {
-	Info(convert.B2S(p))
-
-	return len(p), nil
 }

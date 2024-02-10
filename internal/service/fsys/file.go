@@ -1,8 +1,9 @@
-package config
+package fsys
 
 import (
 	"path/filepath"
 
+	"github.com/klimby/version/internal/config/key"
 	"github.com/spf13/viper"
 )
 
@@ -19,8 +20,8 @@ func (f File) IsAbs() bool {
 	return filepath.IsAbs(f.String())
 }
 
-// empty returns true if the file is empty.
-func (f File) empty() bool {
+// Empty returns true if the file is empty.
+func (f File) Empty() bool {
 	return f.String() == ""
 }
 
@@ -32,12 +33,12 @@ func (f File) Path() string {
 		return p
 	}
 
-	return filepath.Join(viper.GetString(WorkDir), p)
+	return filepath.Join(viper.GetString(key.WorkDir), p)
 }
 
 // Rel returns the relative path to the file.
 func (f File) Rel() string {
-	r, err := filepath.Rel(viper.GetString(WorkDir), f.Path())
+	r, err := filepath.Rel(viper.GetString(key.WorkDir), f.Path())
 	if err != nil {
 		return f.String()
 	}

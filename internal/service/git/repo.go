@@ -12,7 +12,8 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/klimby/version/internal/config"
+	"github.com/klimby/version/internal/config/key"
+	"github.com/klimby/version/internal/service/fsys"
 	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/viper"
 )
@@ -48,7 +49,7 @@ type RepoOptions struct {
 // NewRepository returns a new Repository.
 func NewRepository(opts ...func(options *RepoOptions)) (*Repository, error) {
 	ro := &RepoOptions{
-		Path: viper.GetString(config.WorkDir),
+		Path: viper.GetString(key.WorkDir),
 	}
 
 	for _, opt := range opts {
@@ -104,7 +105,7 @@ func (r Repository) IsClean() (bool, error) {
 
 // AddModified adds modified files to the index.
 func (r Repository) AddModified() error {
-	if viper.GetBool(config.DryRun) {
+	if viper.GetBool(key.DryRun) {
 		return nil
 	}
 
@@ -152,18 +153,14 @@ func (r Repository) RemoteURL() (string, error) {
 	return "", nil
 }
 
-// NextVersion returns a next version.
-func (r Repository) NextVersion(nt NextType, custom version.V) (_ version.V, exists bool, _ error) {
-	if nt == NextNone {
-		return "", false, nil
-	}
-
+// Current returns a current version.
+func (r Repository) Current() (version.V, error) {
 	var lastV version.V
 
 	lastTag, err := r.lastTag()
 	if err != nil {
 		if !errors.Is(err, errTagsNotFound) {
-			return "", false, err
+			return "", err
 		}
 
 		lastV = lastV.Start()
@@ -173,6 +170,20 @@ func (r Repository) NextVersion(nt NextType, custom version.V) (_ version.V, exi
 
 	if lastV.Empty() {
 		lastV = lastV.Start()
+	}
+
+	return lastV, nil
+}
+
+// NextVersion returns a next version.
+func (r Repository) NextVersion(nt NextType, custom version.V) (_ version.V, exists bool, _ error) {
+	if nt == NextNone {
+		return "", false, nil
+	}
+
+	lastV, err := r.Current()
+	if err != nil {
+		return "", false, err
 	}
 
 	var next version.V
@@ -232,8 +243,8 @@ func (r Repository) CheckDowngrade(v version.V) error {
 
 // Add files to the index.
 // files is list from path to files FROM WORKDIR.
-func (r Repository) Add(files ...config.File) error {
-	if viper.GetBool(config.DryRun) {
+func (r Repository) Add(files ...fsys.File) error {
+	if viper.GetBool(key.DryRun) {
 		return nil
 	}
 
@@ -255,7 +266,7 @@ func (r Repository) Add(files ...config.File) error {
 
 // CommitTag stores a tag and commit changes.
 func (r Repository) CommitTag(v version.V) error {
-	if viper.GetBool(config.DryRun) {
+	if viper.GetBool(key.DryRun) {
 		return nil
 	}
 

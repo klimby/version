@@ -6,9 +6,9 @@ import (
 	"io/fs"
 	"os"
 
-	"github.com/klimby/version/internal/config"
-	"github.com/klimby/version/internal/console"
-	"github.com/klimby/version/internal/file"
+	"github.com/klimby/version/internal/config/key"
+	"github.com/klimby/version/internal/service/console"
+	"github.com/klimby/version/internal/service/fsys"
 	"github.com/spf13/viper"
 )
 
@@ -17,8 +17,8 @@ const (
 )
 
 // Create backup of file.
-func Create(f file.ReadWriter, path string) (err error) {
-	if !viper.GetBool(config.Backup) || viper.GetBool(config.DryRun) {
+func Create(f fsys.ReadWriter, path string) (err error) {
+	if !viper.GetBool(key.Backup) || viper.GetBool(key.DryRun) {
 		return nil
 	}
 
@@ -65,7 +65,7 @@ func Create(f file.ReadWriter, path string) (err error) {
 }
 
 // Remove backup of file.
-func Remove(f file.Remover, path ...string) {
+func Remove(f fsys.Remover, path ...string) {
 	for _, p := range path {
 		backPath := p + _suffix
 

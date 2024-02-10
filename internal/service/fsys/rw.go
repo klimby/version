@@ -1,4 +1,4 @@
-package file
+package fsys
 
 import (
 	"io"

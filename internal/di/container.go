@@ -5,12 +5,13 @@ import (
 	"os"
 
 	"github.com/klimby/version/internal/action"
-	"github.com/klimby/version/internal/bump"
-	"github.com/klimby/version/internal/changelog"
 	"github.com/klimby/version/internal/config"
-	"github.com/klimby/version/internal/console"
-	"github.com/klimby/version/internal/file"
-	"github.com/klimby/version/internal/git"
+	"github.com/klimby/version/internal/config/key"
+	"github.com/klimby/version/internal/service/bump"
+	"github.com/klimby/version/internal/service/changelog"
+	"github.com/klimby/version/internal/service/console"
+	"github.com/klimby/version/internal/service/fsys"
+	"github.com/klimby/version/internal/service/git"
 	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/viper"
 )
@@ -33,7 +34,7 @@ type container struct {
 	// cfg config object singleton.
 	cfg *config.C
 
-	f *file.FS
+	f *fsys.FS
 
 	// bump object singleton.
 	bump *bump.B
@@ -49,6 +50,9 @@ type container struct {
 
 	// ActionNext object singleton.
 	ActionNext actionNext
+
+	// ActionCurrent object singleton.
+	ActionCurrent actionCurrent
 }
 
 type actionRemove interface {
@@ -65,15 +69,19 @@ type actionNext interface {
 	Apply(nextV version.V) error
 }
 
+type actionCurrent interface {
+	Current() (version.V, error)
+}
+
 // Init initializes the container.
 func (c *container) Init() error {
-	if viper.GetBool(config.TestingSkipDIInit) {
+	if viper.GetBool(key.TestingSkipDIInit) {
 		c.IsInit = true
 
 		return nil
 	}
 
-	if !viper.GetBool(config.Silent) {
+	if !viper.GetBool(key.Silent) {
 		console.Init(func(args *console.OutArgs) {
 			args.Stderr = os.Stderr
 			args.Stdout = os.Stdout
@@ -86,10 +94,10 @@ func (c *container) Init() error {
 	}
 	c.IsInit = true
 
-	c.f = file.NewFS()
+	c.f = fsys.NewFS()
 
 	repo, err := git.NewRepository(func(options *git.RepoOptions) {
-		options.Path = viper.GetString(config.WorkDir)
+		options.Path = viper.GetString(key.WorkDir)
 	})
 	if err != nil {
 		return err
@@ -122,7 +130,7 @@ func (c *container) Init() error {
 	c.ch = changelog.New(func(options *changelog.Args) {
 		options.RW = c.f
 		options.Repo = c.repo
-		options.ConfigFile = config.File(viper.GetString(config.ChangelogFileName))
+		options.ConfigFile = fsys.File(viper.GetString(key.ChangelogFileName))
 		options.CommitNames = cfg.CommitTypes()
 	})
 
@@ -167,6 +175,8 @@ func (c *container) Init() error {
 	}
 
 	c.ActionNext = aN
+
+	c.ActionCurrent = c.repo
 
 	return nil
 }

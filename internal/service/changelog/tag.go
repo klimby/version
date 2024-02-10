@@ -10,8 +10,9 @@ import (
 	"time"
 
 	"github.com/klimby/version/internal/config"
-	"github.com/klimby/version/internal/console"
-	"github.com/klimby/version/internal/git"
+	"github.com/klimby/version/internal/config/key"
+	"github.com/klimby/version/internal/service/console"
+	"github.com/klimby/version/internal/service/git"
 	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/viper"
 )
@@ -103,7 +104,7 @@ func (t *tagTpl) applyTemplate(wr io.Writer) error {
 
 // versionName returns a version name string in template.
 func versionName() func(t tagTpl) string {
-	remoteURL := viper.GetString(config.RemoteURL)
+	remoteURL := viper.GetString(key.RemoteURL)
 
 	return func(t tagTpl) string {
 		if remoteURL == "" || t.tag.Invalid() || t.prev.Invalid() {
@@ -121,8 +122,8 @@ func versionName() func(t tagTpl) string {
 
 // commitName returns a commit name string in template.
 func commitName() func(c commitTpl) string {
-	remoteURL := viper.GetString(config.RemoteURL)
-	showAuthor := viper.GetBool(config.ChangelogShowAuthor)
+	remoteURL := viper.GetString(key.RemoteURL)
+	showAuthor := viper.GetBool(key.ChangelogShowAuthor)
 
 	return func(c commitTpl) string {
 		var b strings.Builder
@@ -162,7 +163,7 @@ func commitName() func(c commitTpl) string {
 
 // addIssueURL returns a commit message with issue URL in template.
 func addIssueURL() func(s string) string {
-	issueURL := viper.GetString(config.ChangelogIssueURL)
+	issueURL := viper.GetString(key.ChangelogIssueURL)
 	re := regexp.MustCompile(`#\S*`)
 
 	return func(s string) string {

@@ -4,11 +4,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/klimby/version/internal/changelog"
 	"github.com/klimby/version/internal/config"
-	"github.com/klimby/version/internal/console"
-	"github.com/klimby/version/internal/file"
-	"github.com/klimby/version/internal/git"
+	"github.com/klimby/version/internal/config/key"
+	"github.com/klimby/version/internal/service/changelog"
+	"github.com/klimby/version/internal/service/console"
+	"github.com/klimby/version/internal/service/fsys"
+	"github.com/klimby/version/internal/service/git"
 	"github.com/klimby/version/internal/types"
 	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/viper"
@@ -19,7 +20,7 @@ type Next struct {
 	repo  nextArgsRepo
 	chGen nextArgsChGen
 	cfg   nextArgsConfig
-	f     file.ReadWriter
+	f     fsys.ReadWriter
 	bump  nextArgsBump
 	cmd   nextArgsCmd
 }
@@ -60,7 +61,7 @@ type NextArgs struct {
 	Repo  nextArgsRepo
 	ChGen nextArgsChGen
 	Cfg   nextArgsConfig
-	F     file.ReadWriter
+	F     fsys.ReadWriter
 	Bump  nextArgsBump
 	Cmd   nextArgsCmd
 }
@@ -68,7 +69,7 @@ type NextArgs struct {
 // NewNext creates new Next.
 func NewNext(args ...func(arg *NextArgs)) (*Next, error) {
 	a := &NextArgs{
-		F: file.NewFS(),
+		F: fsys.NewFS(),
 	}
 
 	for _, arg := range args {
@@ -202,7 +203,7 @@ func (n *Next) checkClean() error {
 	}
 
 	if !isClean {
-		if !viper.GetBool(config.AllowCommitDirty) {
+		if !viper.GetBool(key.AllowCommitDirty) {
 			return errors.New("repository is not clean")
 		}
 
@@ -220,7 +221,7 @@ func (n *Next) nextVersion(arg PrepareNextArgs) (version.V, error) {
 	}
 
 	if exists {
-		if !viper.GetBool(config.AutoGenerateNextPatch) {
+		if !viper.GetBool(key.AutoGenerateNextPatch) {
 			return arg.Custom, fmt.Errorf("version %s already exists", nextV.FormatString())
 		}
 
@@ -233,7 +234,7 @@ func (n *Next) nextVersion(arg PrepareNextArgs) (version.V, error) {
 // checkDowngrade checks if the version is not downgraded.
 func (n *Next) checkDowngrade(v version.V) error {
 	if err := n.repo.CheckDowngrade(v); err != nil {
-		if !viper.GetBool(config.AllowDowngrades) {
+		if !viper.GetBool(key.AllowDowngrades) {
 			return err
 		}
 
@@ -245,7 +246,7 @@ func (n *Next) checkDowngrade(v version.V) error {
 
 // writeChangelog writes the changelog.
 func (n *Next) writeChangelog(v version.V) error {
-	if !viper.GetBool(config.GenerateChangelog) {
+	if !viper.GetBool(key.GenerateChangelog) {
 		return nil
 	}
 
@@ -254,11 +255,11 @@ func (n *Next) writeChangelog(v version.V) error {
 
 // runCommands runs commands.
 func (n *Next) runCommands(cs []config.Command, v version.V) error {
-	dryMode := viper.GetBool(config.DryRun)
+	dryMode := viper.GetBool(key.DryRun)
 
 	for _, c := range cs {
 		if dryMode && !c.RunInDry {
-			if viper.GetBool(config.Verbose) {
+			if viper.GetBool(key.Verbose) {
 				console.Info(fmt.Sprintf("Skip command %s in dry mode", c.String()))
 			}
 

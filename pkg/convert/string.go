@@ -28,7 +28,7 @@ func I2S(i int) string {
 // S2Clear convert string to clear string.
 func S2Clear(s string) string {
 	replaced := strings.ReplaceAll(s, "\t", "")
-	replaced = strings.ReplaceAll(s, "\u0001", " ") // This symbol is used in the git log output.
+	replaced = strings.ReplaceAll(replaced, "\u0001", " ") // This symbol is used in the git log output.
 	replaced = strings.ReplaceAll(replaced, "\n", " ")
 	reg := regexp.MustCompile(`\s+`)
 	replaced = reg.ReplaceAllString(replaced, " ")
