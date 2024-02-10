@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [Conventional CommitsFromLast](https://www.conventionalcommits.org/en/v1.0.0/) for commit guidelines.
 
+## 1.0.8 (2024-02-10)
+
+### Features
+
+* **action:** add current ([f6bafd7](https://github.com/klimby/version/commit/f6bafd74095172adb804c9b0e69b849b7e57a715))
+
 ## 1.0.7 (2024-02-08)
 
 ### Features
