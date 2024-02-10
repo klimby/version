@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [Conventional CommitsFromLast](https://www.conventionalcommits.org/en/v1.0.0/) for commit guidelines.
 
+## 1.0.9 (2024-02-10)
+
+### Features
+
+* **git:** add git remote with ssh ([21576c7](https://github.com/klimby/version/commit/21576c7e70be833838bd4d25223620753da9b802))
+
 ## 1.0.8 (2024-02-10)
 
 ### Features
