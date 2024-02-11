@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/klimby/version/internal/action/current"
 	"github.com/klimby/version/internal/di"
-	"github.com/klimby/version/internal/service/console"
 	"github.com/spf13/cobra"
 )
 
@@ -14,17 +12,15 @@ var currentCmd = &cobra.Command{
 	Short:         "Current version",
 	SilenceErrors: true,
 	SilenceUsage:  true,
+	Example:       `./version current`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		act := di.C.ActionCurrent
+		action := current.New(func(args *current.Args) {
+			args.Repo = di.C.Repo
+		})
 
-		current, err := act.Current()
-		if err != nil {
-			return err
-		}
+		command.Set(action)
 
-		console.Notice(fmt.Sprintf("Current version: %s", current.FormatString()))
-
-		return nil
+		return command.Run()
 	},
 }
 

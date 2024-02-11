@@ -30,6 +30,7 @@ var (
 type Generator struct {
 	repo gitRepo
 	rw   fsys.ReadWriter
+	bcp  backupSrv
 	f    fsys.File
 	nms  []config.CommitName
 }
@@ -46,10 +47,17 @@ type gitRepo interface {
 	Add(files ...fsys.File) error
 }
 
+// backupSrv is a backup service.
+type backupSrv interface {
+	// Create backup of file.
+	Create(path string) error
+}
+
 // Args is a Generator arguments.
 type Args struct {
 	Repo        gitRepo
 	RW          fsys.ReadWriter
+	Backup      backupSrv
 	ConfigFile  fsys.File
 	CommitNames []config.CommitName
 }
@@ -58,6 +66,7 @@ type Args struct {
 func New(args ...func(arg *Args)) *Generator {
 	a := &Args{
 		RW:         fsys.NewFS(),
+		Backup:     backup.New(),
 		ConfigFile: fsys.File(viper.GetString(key.ChangelogFileName)),
 	}
 
@@ -72,6 +81,7 @@ func New(args ...func(arg *Args)) *Generator {
 	return &Generator{
 		repo: a.Repo,
 		rw:   a.RW,
+		bcp:  a.Backup,
 		f:    a.ConfigFile,
 		nms:  a.CommitNames,
 	}
@@ -79,7 +89,7 @@ func New(args ...func(arg *Args)) *Generator {
 
 // Add adds new version to changelog.
 func (g Generator) Add(nextV version.V) (err error) {
-	if err := backup.Create(g.rw, g.f.Path()); err != nil {
+	if err := g.bcp.Create(g.f.Path()); err != nil {
 		return err
 	}
 
@@ -215,7 +225,7 @@ func (g Generator) generateAll(opt ...func(*git.CommitsArgs)) (err error) {
 
 // rewrite changelog.
 func (g Generator) rewrite(opt ...func(*git.CommitsArgs)) (err error) {
-	if err := backup.Create(g.rw, g.f.Path()); err != nil {
+	if err := g.bcp.Create(g.f.Path()); err != nil {
 		return err
 	}
 

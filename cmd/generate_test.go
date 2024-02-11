@@ -7,10 +7,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func Test_removeCmd(t *testing.T) {
+func Test_generateCmd(t *testing.T) {
 	helper := &__helpCaller{}
 
-	removeCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+	generateCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		t.Helper()
 		helper.called = true
 	})
@@ -22,14 +22,20 @@ func Test_removeCmd(t *testing.T) {
 	tests := []struct {
 		name           string
 		arg            string
-		wantCallBackup bool
+		wantCallAction bool
 		wantCallHelp   bool
 		wantErr        bool
 	}{
 		{
-			name:           "call backup",
-			arg:            "--backup",
-			wantCallBackup: true,
+			name:           "call config-file",
+			arg:            "--config-file",
+			wantCallAction: true,
+			wantErr:        false,
+		},
+		{
+			name:           "call changelog",
+			arg:            "--changelog",
+			wantCallAction: true,
 			wantErr:        false,
 		},
 		{
@@ -40,53 +46,32 @@ func Test_removeCmd(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			//t.Parallel()
-
 			t.Cleanup(func() {
 				helper.called = false
-				removeCmd.ResetFlags()
-				initRemoveCmd()
+				generateCmd.ResetFlags()
+				initGenerateCmd()
 			})
 
 			runner := &__runner{}
 			command.SetForce(runner)
 
-			rootCmd.SetArgs([]string{"remove", tt.arg})
+			rootCmd.SetArgs([]string{generateCmd.Use, tt.arg})
 
 			err := rootCmd.Execute()
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("removeCmd() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("generateCmd() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			if tt.wantCallBackup != runner.called {
-				t.Errorf("removeCmd() error = %v, wantErr %v", "not called", tt.wantCallBackup)
+			if tt.wantCallAction != runner.called {
+				t.Errorf("generateCmd() error = %v, wantErr %v", "not called", tt.wantCallAction)
 			}
 
 			if tt.wantCallHelp != helper.called {
-				t.Errorf("removeCmd() error = %v, wantErr %v", "not called", tt.wantCallHelp)
+				t.Errorf("generateCmd() error = %v, wantErr %v", "not called", tt.wantCallHelp)
 			}
+
 		})
 	}
-
-}
-
-type __runner struct {
-	called bool
-}
-
-func (r *__runner) Run() error {
-	r.called = true
-
-	return nil
-}
-
-type __helpCaller struct {
-	called bool
-}
-
-func (h *__helpCaller) Help() {
-	h.called = true
 }

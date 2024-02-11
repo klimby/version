@@ -126,7 +126,10 @@ func commitName() func(c commitTpl) string {
 	showAuthor := viper.GetBool(key.ChangelogShowAuthor)
 
 	return func(c commitTpl) string {
-		var b strings.Builder
+		var (
+			b strings.Builder
+			u string
+		)
 
 		if c.Scope != "" {
 			b.WriteString("**")
@@ -136,9 +139,11 @@ func commitName() func(c commitTpl) string {
 
 		b.WriteString(c.Message)
 
-		u, err := url.JoinPath(remoteURL, "commit", c.Hash)
-		if err != nil || remoteURL == "" {
-			u = ""
+		if remoteURL != "" {
+			ur, err := url.JoinPath(remoteURL, "commit", c.Hash)
+			if err == nil {
+				u = ur
+			}
 		}
 
 		if u != "" {
@@ -176,7 +181,7 @@ func addIssueURL() func(s string) string {
 
 			u, err := url.JoinPath(issueURL, i)
 			if err != nil {
-				return s
+				return match
 			}
 
 			return fmt.Sprintf("[%s](%s)", i, u)

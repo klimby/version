@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/klimby/version/internal/action/generate"
 	"github.com/klimby/version/internal/di"
-	"github.com/klimby/version/internal/types"
 	"github.com/spf13/cobra"
 )
 
@@ -15,31 +13,38 @@ var generateCmd = &cobra.Command{
 	Long:          `Generate and rewrite config and changelog files.`,
 	SilenceErrors: true,
 	SilenceUsage:  true,
+	Example: `./version generate --config-file
+./version generate --changelog`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		gen := di.C.ActionGenerate
-		if gen == nil {
-			return fmt.Errorf("action generate is nil: %w", types.ErrNotInitialized)
+		actionType := generate.FileUnknown
+
+		flags := []generate.ActionType{generate.FileConfig, generate.FileChangelog}
+
+		for _, f := range flags {
+			b, err := cmd.Flags().GetBool(f.String())
+			if err != nil {
+				return err
+			}
+
+			if b {
+				actionType = f
+				break
+			}
 		}
 
-		c, err := cmd.Flags().GetBool("config-file")
-		if err != nil {
-			return err
+		if actionType == generate.FileUnknown {
+			return cmd.Help()
 		}
 
-		if c {
-			return gen.Config()
-		}
+		action := generate.New(func(args *generate.Args) {
+			args.ActionType = actionType
+			args.CfgGenerator = di.C.Config
+			args.ChangelogGen = di.C.ChangelogGenerator
+		})
 
-		changelog, err := cmd.Flags().GetBool("changelog")
-		if err != nil {
-			return err
-		}
+		command.Set(action)
 
-		if changelog {
-			return gen.Changelog()
-		}
-
-		return cmd.Help()
+		return command.Run()
 	},
 }
 
@@ -51,6 +56,6 @@ func init() {
 
 // initGenerateCmd - init generate command.
 func initGenerateCmd() {
-	generateCmd.Flags().Bool("config-file", false, "generate config file")
-	generateCmd.Flags().Bool("changelog", false, "generate changelog file")
+	generateCmd.Flags().Bool(generate.FileConfig.String(), false, "generate config file")
+	generateCmd.Flags().Bool(generate.FileChangelog.String(), false, "generate changelog file")
 }

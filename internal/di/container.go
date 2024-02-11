@@ -4,7 +4,6 @@ import (
 	"errors"
 	"os"
 
-	"github.com/klimby/version/internal/action"
 	"github.com/klimby/version/internal/config"
 	"github.com/klimby/version/internal/config/key"
 	"github.com/klimby/version/internal/service/bump"
@@ -12,7 +11,6 @@ import (
 	"github.com/klimby/version/internal/service/console"
 	"github.com/klimby/version/internal/service/fsys"
 	"github.com/klimby/version/internal/service/git"
-	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/viper"
 )
 
@@ -25,52 +23,17 @@ type container struct {
 	// IsInit is true if the container is initialized.
 	IsInit bool
 
-	// repo object singleton.
-	repo *git.Repository
+	// Repo object singleton.
+	Repo *git.Repository
 
-	// ch changelog object singleton.
-	ch *changelog.Generator
+	// ChangelogGenerator changelog object singleton.
+	ChangelogGenerator *changelog.Generator
 
-	// cfg config object singleton.
-	cfg *config.C
+	// Config object singleton.
+	Config *config.C
 
-	f *fsys.FS
-
-	// bump object singleton.
-	bump *bump.B
-
-	// cmd object singleton.
-	c *console.Cmd
-
-	// ActionRemove object singleton.
-	ActionRemove actionRemove
-
-	// ActionGenerate object singleton.
-	ActionGenerate actionGenerate
-
-	// ActionNext object singleton.
-	ActionNext actionNext
-
-	// ActionCurrent object singleton.
-	ActionCurrent actionCurrent
-}
-
-type actionRemove interface {
-	Backup()
-}
-
-type actionGenerate interface {
-	Config() error
-	Changelog() error
-}
-
-type actionNext interface {
-	Prepare(args ...func(arg *action.PrepareNextArgs)) (version.V, error)
-	Apply(nextV version.V) error
-}
-
-type actionCurrent interface {
-	Current() (version.V, error)
+	// Bump object singleton.
+	Bump *bump.B
 }
 
 // Init initializes the container.
@@ -94,16 +57,12 @@ func (c *container) Init() error {
 	}
 	c.IsInit = true
 
-	c.f = fsys.NewFS()
-
-	repo, err := git.NewRepository(func(options *git.RepoOptions) {
-		options.Path = viper.GetString(key.WorkDir)
-	})
+	repo, err := git.NewRepository()
 	if err != nil {
 		return err
 	}
 
-	c.repo = repo
+	c.Repo = repo
 
 	remote, err := repo.RemoteURL()
 	if err != nil {
@@ -112,12 +71,14 @@ func (c *container) Init() error {
 
 	config.SetURLFromGit(remote)
 
-	cfg, err := config.Load(c.f)
+	rw := fsys.NewFS()
+
+	cfg, err := config.Load(rw)
 	if err != nil {
 		return err
 	}
 
-	c.cfg = &cfg
+	c.Config = &cfg
 
 	if err := cfg.Validate(); err != nil {
 		if !errors.Is(err, config.ErrConfigWarn) {
@@ -127,56 +88,15 @@ func (c *container) Init() error {
 		console.Warn(err.Error())
 	}
 
-	c.ch = changelog.New(func(options *changelog.Args) {
-		options.RW = c.f
-		options.Repo = c.repo
+	c.ChangelogGenerator = changelog.New(func(options *changelog.Args) {
+		options.Repo = c.Repo
 		options.ConfigFile = fsys.File(viper.GetString(key.ChangelogFileName))
 		options.CommitNames = cfg.CommitTypes()
 	})
 
-	c.bump = bump.New(func(arg *bump.Args) {
-		arg.RW = c.f
-		arg.Repo = c.repo
+	c.Bump = bump.New(func(arg *bump.Args) {
+		arg.Repo = c.Repo
 	})
-
-	c.c = console.NewCmd()
-
-	a, err := action.NewRemove(func(options *action.ArgsRemove) {
-		options.Cfg = cfg
-	})
-
-	if err != nil {
-		return err
-	}
-
-	c.ActionRemove = a
-
-	aG, err := action.NewGenerate(func(options *action.GenerateArgs) {
-		options.Rw = c.f
-		options.CfgGen = cfg
-		options.ClogGen = c.ch
-	})
-	if err != nil {
-		return err
-	}
-
-	c.ActionGenerate = aG
-
-	aN, err := action.NewNext(func(args *action.NextArgs) {
-		args.Repo = c.repo
-		args.ChGen = c.ch
-		args.Cfg = c.cfg
-		args.F = c.f
-		args.Bump = c.bump
-		args.Cmd = c.c
-	})
-	if err != nil {
-		return err
-	}
-
-	c.ActionNext = aN
-
-	c.ActionCurrent = c.repo
 
 	return nil
 }

@@ -20,22 +20,29 @@ import (
 type B struct {
 	rw   fsys.ReadWriter
 	repo gitRepo
+	bcp  backupSrv
 }
 
 type gitRepo interface {
 	Add(files ...fsys.File) error
 }
 
+type backupSrv interface {
+	Create(path string) error
+}
+
 // Args is a Bump arguments.
 type Args struct {
-	RW   fsys.ReadWriter
-	Repo gitRepo
+	RW     fsys.ReadWriter
+	Repo   gitRepo
+	Backup backupSrv
 }
 
 // New creates new Bump.
 func New(args ...func(arg *Args)) *B {
 	a := &Args{
-		RW: fsys.NewFS(),
+		RW:     fsys.NewFS(),
+		Backup: backup.New(),
 	}
 
 	for _, arg := range args {
@@ -49,13 +56,14 @@ func New(args ...func(arg *Args)) *B {
 	return &B{
 		rw:   a.RW,
 		repo: a.Repo,
+		bcp:  a.Backup,
 	}
 }
 
 // Apply bumps files.
 func (b B) Apply(bumps []config.BumpFile, v version.V) {
 	for _, bmp := range bumps {
-		if err := backup.Create(b.rw, bmp.File.Path()); err != nil {
+		if err := b.bcp.Create(bmp.File.Path()); err != nil {
 			console.Error(err.Error())
 		}
 

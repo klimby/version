@@ -1,7 +1,6 @@
 package console
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"strings"
@@ -39,22 +38,6 @@ type OutArgs struct {
 	Colorize bool
 }
 
-// InitTest - init console for testing.
-func InitTest(colorize ...bool) func() {
-	c.stderr = &testWriter{}
-	c.stdout = &testWriter{}
-
-	if len(colorize) > 0 {
-		c.colorize = colorize[0]
-	}
-
-	return func() {
-		c.stderr = &nilWriter{}
-		c.stdout = &nilWriter{}
-		c.colorize = false
-	}
-}
-
 // Init - init console.
 // WARNING: without args.
 func Init(args ...func(*OutArgs)) {
@@ -71,22 +54,6 @@ func Init(args ...func(*OutArgs)) {
 	c.stdout = arg.Stdout
 	c.stderr = arg.Stderr
 	c.colorize = arg.Colorize
-}
-
-// Read - read stdout and stderr, if they are testWriter.
-// For testing.
-func Read() (stdout, stderr string) {
-	// check if stdout is testWriter
-	if w, ok := c.stdout.(*testWriter); ok {
-		stdout = w.String()
-	}
-
-	// check if stderr is testWriter
-	if w, ok := c.stderr.(*testWriter); ok {
-		stderr = w.String()
-	}
-
-	return stdout, stderr
 }
 
 // printLn - print line.
@@ -154,22 +121,4 @@ type nilWriter struct{}
 // Write - write to nowhere.
 func (*nilWriter) Write(p []byte) (int, error) {
 	return len(p), nil
-}
-
-// testWriter - write to buffer.
-type testWriter struct {
-	buffer bytes.Buffer
-}
-
-// Write - write to buffer.
-func (n *testWriter) Write(p []byte) (int, error) {
-	return n.buffer.Write(p)
-}
-
-// String - return buffer as string.
-func (n *testWriter) String() string {
-	s := convert.B2S(n.buffer.Bytes())
-	n.buffer.Reset()
-
-	return s
 }

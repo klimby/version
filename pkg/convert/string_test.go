@@ -109,7 +109,7 @@ func TestS2Int(t *testing.T) {
 			want: 0,
 		},
 		{
-			name: "string to int without default error",
+			name: "string to int without default",
 			args: args{
 				s: "a",
 			},

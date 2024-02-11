@@ -1,15 +1,10 @@
 package cmd
 
 import (
-	"fmt"
-
-	"github.com/klimby/version/internal/action"
+	"github.com/klimby/version/internal/action/next"
 	"github.com/klimby/version/internal/config"
 	"github.com/klimby/version/internal/config/key"
 	"github.com/klimby/version/internal/di"
-	"github.com/klimby/version/internal/service/console"
-	"github.com/klimby/version/internal/service/git"
-	"github.com/klimby/version/internal/types"
 	"github.com/klimby/version/pkg/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -22,89 +17,56 @@ var nextCmd = &cobra.Command{
 	Long:          `Generate next version, bump files, generate changelog.`,
 	SilenceErrors: true,
 	SilenceUsage:  true,
+	Example: `./version next --major
+./version next --minor
+./version next --patch
+./version next --ver=1.2.3`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		next := di.C.ActionNext
-		if next == nil {
-			return fmt.Errorf("action next is nil: %w", types.ErrNotInitialized)
-		}
+		actionType := next.ActionUnknown
+		v := version.V("")
 
-		na := action.PrepareNextArgs{
-			NextType: git.NextNone,
-		}
+		flags := []next.ActionType{next.ActionMajor, next.ActionMinor, next.ActionPatch}
 
-		major, err := cmd.Flags().GetBool("major")
-		if err != nil {
-			return err
-		}
-
-		if major {
-			na.NextType = git.NextMajor
-		}
-
-		if na.NextType == git.NextNone {
-			minor, err := cmd.Flags().GetBool("minor")
+		for _, f := range flags {
+			b, err := cmd.Flags().GetBool(f.String())
 			if err != nil {
 				return err
 			}
 
-			if minor {
-				na.NextType = git.NextMinor
+			if b {
+				actionType = f
+				break
 			}
 		}
 
-		if na.NextType == git.NextNone {
-			patch, err := cmd.Flags().GetBool("patch")
-			if err != nil {
-				return err
-			}
-
-			if patch {
-				na.NextType = git.NextPatch
-			}
-		}
-
-		if na.NextType == git.NextNone {
-			ver, err := cmd.Flags().GetString("ver")
+		if actionType == next.ActionUnknown {
+			ver, err := cmd.Flags().GetString(next.ActionCustom.String())
 			if err != nil {
 				return err
 			}
 
 			if ver != "" {
-				nextV := version.V(ver)
-				if nextV.Invalid() {
-					return fmt.Errorf("invalid version: %s", nextV)
-				}
-
-				na.NextType = git.NextCustom
-				na.Custom = nextV
+				v = version.V(ver)
+				actionType = next.ActionCustom
 			}
 		}
 
-		if na.NextType == git.NextNone {
-			if err := cmd.Help(); err != nil {
-				return err
-			}
+		if actionType == next.ActionUnknown {
+			return cmd.Help()
 		}
 
-		prepare, err := cmd.Flags().GetBool("prepare")
-		if err != nil {
-			return err
-		}
-
-		nv, err := next.Prepare(func(args *action.PrepareNextArgs) {
-			args.NextType = na.NextType
-			args.Custom = na.Custom
+		action := next.New(func(args *next.Args) {
+			args.Repo = di.C.Repo
+			args.ChangelogGen = di.C.ChangelogGenerator
+			args.Cfg = di.C.Config
+			args.Bump = di.C.Bump
+			args.ActionType = actionType
+			args.Version = v
 		})
-		if err != nil {
-			return err
-		}
 
-		if prepare {
-			console.Success(fmt.Sprintf("Prepare complete, next version is %s", nv.FormatString()))
-			return nil
-		}
+		command.Set(action)
 
-		return next.Apply(nv)
+		return command.Run()
 	},
 }
 
@@ -116,25 +78,31 @@ func init() {
 
 // initNextCmd - init next command.
 func initNextCmd() {
-	nextCmd.Flags().Bool("major", false, "next major version")
-	nextCmd.Flags().Bool("minor", false, "next minor version")
-	nextCmd.Flags().Bool("patch", false, "next patch version")
-	nextCmd.Flags().String("ver", "", "next build version in format 1.2.3")
-	nextCmd.MarkFlagsMutuallyExclusive("major", "minor", "patch", "ver")
+	nextCmd.Flags().Bool(next.ActionMajor.String(), false, "next major version")
+	nextCmd.Flags().Bool(next.ActionMinor.String(), false, "next minor version")
+	nextCmd.Flags().Bool(next.ActionPatch.String(), false, "next patch version")
+
+	nextCmd.Flags().String(next.ActionCustom.String(), "", "next build version in format 1.2.3")
 
 	nextCmd.Flags().Bool("prepare", false, "run only bump files and commands before")
 
-	rootCmd.PersistentFlags().BoolP("backup", "b", false, "backup changed files")
+	if err := viper.BindPFlag(key.Prepare, nextCmd.Flags().Lookup("prepare")); err != nil {
+		viper.Set(key.Prepare, false)
+	}
 
-	if err := viper.BindPFlag(key.Backup, rootCmd.PersistentFlags().Lookup("backup")); err != nil {
+	viper.SetDefault(key.Prepare, false)
+
+	nextCmd.Flags().BoolP("backup", "b", false, "backup changed files")
+
+	if err := viper.BindPFlag(key.Backup, nextCmd.Flags().Lookup("backup")); err != nil {
 		viper.Set(key.Backup, false)
 	}
 
 	viper.SetDefault(key.Backup, false)
 
-	rootCmd.PersistentFlags().BoolP("force", "f", false, "force mode")
+	nextCmd.Flags().BoolP("force", "f", false, "force mode")
 
-	if err := viper.BindPFlag(key.Force, rootCmd.PersistentFlags().Lookup("force")); err != nil {
+	if err := viper.BindPFlag(key.Force, nextCmd.Flags().Lookup("force")); err != nil {
 		viper.Set(key.Force, false)
 	}
 

@@ -26,6 +26,8 @@ const (
 	DryRun  = "dryRun"        // Dry run mode from flags.
 	Force   = "force"         // Force mode from flags.
 	Verbose = "verbose"       // Verbose mode from flags.
+
+	Prepare = "prepare" // Prepare flag in next command.
 )
 
 // Viper testing keys.

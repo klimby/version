@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/klimby/version/internal/action"
 	"github.com/klimby/version/internal/config"
 	"github.com/klimby/version/internal/config/key"
 	"github.com/klimby/version/internal/di"
@@ -12,6 +13,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+var command = &action.Runner{}
 
 // rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
@@ -34,6 +37,9 @@ var rootCmd = &cobra.Command{
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() error {
 	rootCmd.Version = viper.GetString(key.Version)
+
+	console.Notice(fmt.Sprintf("CLI tool for versioning Version v%s.", viper.GetString(key.Version)))
+	console.Notice("See https://github.com/klimby/version for more information.\n")
 
 	return rootCmd.Execute()
 }
@@ -59,7 +65,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringP("config", "c", config.DefaultConfigFile, "config file path")
 
-	if err := viper.BindPFlag(key.CfgFile, rootCmd.PersistentFlags().Lookup("config-file")); err != nil {
+	if err := viper.BindPFlag(key.CfgFile, rootCmd.PersistentFlags().Lookup("config")); err != nil {
 		viper.Set(key.CfgFile, config.DefaultConfigFile)
 	}
 
@@ -91,7 +97,4 @@ func initConfig() {
 		//nolint:revive
 		os.Exit(1)
 	}
-
-	console.Notice(fmt.Sprintf("CLI tool for versioning Version v%s.", viper.GetString(key.Version)))
-	console.Notice("See https://github.com/klimby/version for more information.\n")
 }

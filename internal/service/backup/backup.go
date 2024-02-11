@@ -16,15 +16,47 @@ const (
 	_suffix = ".bak"
 )
 
+// Service is a backup service.
+type Service struct {
+	rw rwService
+}
+
+// rwService is a read/write service.
+type rwService interface {
+	Read(patch string) (io.ReadCloser, error)
+	Write(patch string, flag int) (io.WriteCloser, error)
+	Remove(patch string) error
+}
+
+// Args is a Service arguments.
+type Args struct {
+	RW rwService
+}
+
+// New creates new Service.
+func New(args ...func(arg *Args)) *Service {
+	a := &Args{
+		RW: fsys.NewFS(),
+	}
+
+	for _, arg := range args {
+		arg(a)
+	}
+
+	return &Service{
+		rw: a.RW,
+	}
+}
+
 // Create backup of file.
-func Create(f fsys.ReadWriter, path string) (err error) {
+func (s Service) Create(path string) (err error) {
 	if !viper.GetBool(key.Backup) || viper.GetBool(key.DryRun) {
 		return nil
 	}
 
 	backPath := path + _suffix
 
-	src, err := f.Read(path)
+	src, err := s.rw.Read(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil
@@ -41,7 +73,7 @@ func Create(f fsys.ReadWriter, path string) (err error) {
 		}
 	}()
 
-	back, err := f.Write(backPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC)
+	back, err := s.rw.Write(backPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC)
 	if err != nil {
 		return err
 	}
@@ -65,11 +97,11 @@ func Create(f fsys.ReadWriter, path string) (err error) {
 }
 
 // Remove backup of file.
-func Remove(f fsys.Remover, path ...string) {
+func (s Service) Remove(path ...string) {
 	for _, p := range path {
 		backPath := p + _suffix
 
-		if err := f.Remove(backPath); err != nil {
+		if err := s.rw.Remove(backPath); err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				continue
 			}
