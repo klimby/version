@@ -41,7 +41,6 @@ type Options struct {
 // Init initializes the configuration.
 func Init(opts ...func(options *Options)) {
 	co := &Options{
-		// WorkDir:               _WorkDir,
 		Version:               _Version,
 		AllowCommitDirty:      _AllowCommitDirty,
 		AutoGenerateNextPatch: _AutoGenerateNextPatch,
@@ -52,9 +51,6 @@ func Init(opts ...func(options *Options)) {
 		ConfigFile:            DefaultConfigFile,
 		ChangelogShowAuthor:   _ChangelogShowAuthor,
 		ChangelogShowBody:     _ChangelogShowBody,
-		// Silent:                false,
-		// DryRun:                false,
-		// Backup:                false,
 	}
 
 	for _, opt := range opts {
@@ -132,10 +128,23 @@ func SetURLFromGit(u string) {
 	}
 }
 
+// LoadArgs is a load configuration arguments.
+type LoadArgs struct {
+	RW configRW
+}
+
 // Load loads the configuration from config.yaml.
 // Run after config.Init() in main.go.
-func Load(f fsys.Reader) (C, error) {
-	c, err := newConfig(f)
+func Load(opts ...func(options *LoadArgs)) (C, error) {
+	lo := &LoadArgs{
+		RW: fsys.New(),
+	}
+
+	for _, opt := range opts {
+		opt(lo)
+	}
+
+	c, err := newConfig(lo.RW)
 	if err != nil {
 		return c, err
 	}

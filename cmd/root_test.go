@@ -11,11 +11,11 @@ import (
 )
 
 func Test_rootFlags(t *testing.T) {
-	helper := &__helpCaller{}
+	helperMock := __newHelpMock()
 
 	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		t.Helper()
-		helper.called = true
+		helperMock.Help()
 	})
 
 	config.Init(func(options *config.Options) {
@@ -30,11 +30,7 @@ func Test_rootFlags(t *testing.T) {
 		"--dir=foo",
 	})
 
-	err := rootCmd.Execute()
-
-	if err != nil {
-		t.Errorf("rootCmd() error = %v, wantErr %v", err, false)
-	}
+	assert.NoError(t, rootCmd.Execute(), "rootCmd()")
 
 	assert.Equal(t, true, viper.GetBool(key.Silent), "silent flag not set")
 	assert.Equal(t, true, viper.GetBool(key.DryRun), "dry flag not set")

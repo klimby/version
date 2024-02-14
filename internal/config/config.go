@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -42,10 +43,18 @@ type C struct {
 	ChangelogOptions changelogOptions `yaml:"changelog"`
 	// Bump is a list of files for bump.
 	Bump []BumpFile `yaml:"bump"`
+
+	rw configRW
+}
+
+type configRW interface {
+	Read(patch string) (io.ReadCloser, error)
+	Exists(p string) bool
+	Write(patch string, flag int) (io.WriteCloser, error)
 }
 
 // newConfig returns a new configuration.
-func newConfig(f fsys.Reader) (_ C, err error) {
+func newConfig(rw configRW) (_ C, err error) {
 	c := C{
 		Version: version.V(viper.GetString(key.Version)),
 		Backup:  viper.GetBool(key.Backup),
@@ -66,11 +75,12 @@ func newConfig(f fsys.Reader) (_ C, err error) {
 			ShowBody:    viper.GetBool(key.ChangelogShowBody),
 			CommitTypes: _defaultCommitNames,
 		},
+		rw: rw,
 	}
 
 	cfg := fsys.File(viper.GetString(key.CfgFile))
 
-	r, err := f.Read(cfg.Path())
+	r, err := rw.Read(cfg.Path())
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return c, nil
@@ -117,10 +127,10 @@ func (c C) CommitTypes() []CommitName {
 }
 
 // Generate generates the configuration file.
-func (c C) Generate(f fsys.Writer) error {
+func (c C) Generate() (err error) {
 	p := fsys.File(viper.GetString(key.CfgFile))
 
-	w, err := f.Write(p.Path(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC)
+	w, err := c.rw.Write(p.Path(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC)
 	if err != nil {
 		return fmt.Errorf("open config file error: %w", err)
 	}
@@ -171,7 +181,7 @@ func (c C) Validate() error {
 	}
 
 	for _, f := range c.Bump {
-		if err := f.validate(); err != nil {
+		if err := f.validate(c.rw); err != nil {
 			return err
 		}
 	}
@@ -181,11 +191,11 @@ func (c C) Validate() error {
 
 // validateVersion validates the version.
 func validateVersion(current, warning, critical version.V) error {
-	if !critical.Empty() && current.LessThen(critical) {
+	if !critical.Empty() && critical.LessThen(current) {
 		return fmt.Errorf(`%w: you use older version of config file. For update run "version generate --config-file"`, errConfig)
 	}
 
-	if !warning.Empty() && current.LessThen(warning) {
+	if !warning.Empty() && warning.LessThen(current) {
 		return fmt.Errorf(`%w: you use older version of config file. For update run "version generate --config-file"`, ErrConfigWarn)
 	}
 
@@ -313,15 +323,16 @@ func (f BumpFile) IsPredefinedJSON() bool {
 	return n == "composer.json" || n == "package.json"
 }
 
-// validate BumpFile validates the file for bump.
-func (f BumpFile) validate() error {
-	// check if file exists
-	if _, err := os.Stat(f.File.Path()); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf(`%w: file %s does not exist`, errConfig, f.File)
-		}
+type bumpRW interface {
+	Exists(p string) bool
+}
 
-		return fmt.Errorf(`%w: file %s error: %w`, errConfig, f.File, err)
+// validate BumpFile validates the file for bump.
+func (f BumpFile) validate(rw bumpRW) error {
+	// check if file exists
+	exists := rw.Exists(f.File.Path())
+	if !exists {
+		return fmt.Errorf(`%w: file %s does not exist`, errConfig, f.File)
 	}
 
 	if f.IsPredefinedJSON() {

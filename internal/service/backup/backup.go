@@ -25,7 +25,7 @@ type Service struct {
 type rwService interface {
 	Read(patch string) (io.ReadCloser, error)
 	Write(patch string, flag int) (io.WriteCloser, error)
-	Remove(patch string) error
+	RemoveAll(patch string) error
 }
 
 // Args is a Service arguments.
@@ -36,7 +36,7 @@ type Args struct {
 // New creates new Service.
 func New(args ...func(arg *Args)) *Service {
 	a := &Args{
-		RW: fsys.NewFS(),
+		RW: fsys.New(),
 	}
 
 	for _, arg := range args {
@@ -101,12 +101,12 @@ func (s Service) Remove(path ...string) {
 	for _, p := range path {
 		backPath := p + _suffix
 
-		if err := s.rw.Remove(backPath); err != nil {
+		if err := s.rw.RemoveAll(backPath); err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				continue
 			}
 
-			console.Error("Remove backup file " + backPath + " error: " + err.Error())
+			console.Error("RemoveAll backup file " + backPath + " error: " + err.Error())
 
 			continue
 		}

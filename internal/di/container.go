@@ -71,9 +71,7 @@ func (c *container) Init() error {
 
 	config.SetURLFromGit(remote)
 
-	rw := fsys.NewFS()
-
-	cfg, err := config.Load(rw)
+	cfg, err := config.Load()
 	if err != nil {
 		return err
 	}

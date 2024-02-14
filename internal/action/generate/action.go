@@ -2,7 +2,6 @@ package generate
 
 import (
 	"fmt"
-	"io"
 
 	"github.com/klimby/version/internal/config/key"
 	"github.com/klimby/version/internal/service/backup"
@@ -31,27 +30,15 @@ const (
 
 // Action - generate action.
 type Action struct {
-	rw           rwService
-	cfgGen       configGenerator
-	changelogGen changelogGenerator
+	cfgGen       generator
+	changelogGen generator
 	backup       backupService
 	actionType   ActionType
 }
 
-// rwService - read/write service interface.
-type rwService interface {
-	Read(string) (io.ReadCloser, error)
-	Write(patch string, flag int) (io.WriteCloser, error)
-}
-
-// changelogGenerator - changelog generator interface.
-type changelogGenerator interface {
+// generator - config generator interface.
+type generator interface {
 	Generate() error
-}
-
-// configGenerator - config generator interface.
-type configGenerator interface {
-	Generate(fsys.Writer) error
 }
 
 // backupService - backup service interface.
@@ -61,9 +48,8 @@ type backupService interface {
 
 // Args is a Action arguments.
 type Args struct {
-	RW           rwService
-	CfgGenerator configGenerator
-	ChangelogGen changelogGenerator
+	CfgGenerator generator
+	ChangelogGen generator
 	Backup       backupService
 	ActionType   ActionType
 }
@@ -71,7 +57,6 @@ type Args struct {
 // New creates new Action.
 func New(args ...func(arg *Args)) *Action {
 	a := &Args{
-		RW:         fsys.NewFS(),
 		Backup:     backup.New(),
 		ActionType: FileUnknown,
 	}
@@ -81,7 +66,6 @@ func New(args ...func(arg *Args)) *Action {
 	}
 
 	return &Action{
-		rw:           a.RW,
 		cfgGen:       a.CfgGenerator,
 		changelogGen: a.ChangelogGen,
 		backup:       a.Backup,
@@ -90,7 +74,7 @@ func New(args ...func(arg *Args)) *Action {
 }
 
 // Run action.
-func (a *Action) Run() error {
+func (a Action) Run() error {
 	if err := a.validate(); err != nil {
 		return err
 	}
@@ -103,11 +87,10 @@ func (a *Action) Run() error {
 	default:
 		return fmt.Errorf("%w: unknown file type", types.ErrInvalidArguments)
 	}
-
 }
 
 // validate action.
-func (a *Action) validate() error {
+func (a Action) validate() error {
 	if a.actionType == FileConfig && a.cfgGen == nil {
 		return fmt.Errorf("%w: config generator is nil in generate", types.ErrInvalidArguments)
 	}
@@ -120,7 +103,7 @@ func (a *Action) validate() error {
 }
 
 // config generates config file.
-func (a *Action) config() error {
+func (a Action) config() error {
 	console.Notice("Generate config file...")
 
 	p := fsys.File(viper.GetString(key.CfgFile))
@@ -129,7 +112,7 @@ func (a *Action) config() error {
 		return err
 	}
 
-	if err := a.cfgGen.Generate(a.rw); err != nil {
+	if err := a.cfgGen.Generate(); err != nil {
 		return err
 	}
 
@@ -139,7 +122,7 @@ func (a *Action) config() error {
 }
 
 // changelog generates changelog file.
-func (a *Action) changelog() error {
+func (a Action) changelog() error {
 	if !viper.GetBool(key.GenerateChangelog) {
 		console.Info("Changelog generation disabled.")
 

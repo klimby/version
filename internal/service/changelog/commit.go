@@ -40,6 +40,10 @@ type commitTpl struct {
 
 // shortHash returns the short commit hash.
 func (m commitTpl) shortHash() string {
+	if len(m.Hash) < 7 {
+		return m.Hash
+	}
+
 	return m.Hash[:7]
 }
 

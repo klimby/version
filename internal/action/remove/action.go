@@ -23,7 +23,7 @@ func (ft ActionType) String() string {
 const (
 	// ActionUnknown is an unknown file type.
 	ActionUnknown ActionType = "unknown"
-	// ActionBackup is a backup file type. Remove backup files.
+	// ActionBackup is a backup file type. RemoveAll backup files.
 	ActionBackup ActionType = "backup"
 )
 
@@ -70,14 +70,14 @@ func New(args ...func(arg *Args)) *Action {
 }
 
 // Run action.
-func (a *Action) Run() error {
+func (a Action) Run() error {
 	if err := a.validate(); err != nil {
 		return err
 	}
 
 	switch a.actionType {
 	case ActionBackup:
-		a.backup()
+		a.makeBackup()
 	default:
 		return fmt.Errorf("%w: unknown file type", types.ErrInvalidArguments)
 	}
@@ -85,11 +85,12 @@ func (a *Action) Run() error {
 	return nil
 }
 
-// backup - remove backup files.
-func (a *Action) backup() {
-	console.Notice("Remove backup files...")
+// makeBackup - remove backup files.
+func (a Action) makeBackup() {
+	console.Notice("RemoveAll backup files...")
 
-	a.remover.Remove(fsys.File(viper.GetString(key.CfgFile)).Path())
+	c := fsys.File(viper.GetString(key.CfgFile)).Path()
+	a.remover.Remove(c)
 
 	for _, bmp := range a.cfg.BumpFiles() {
 		a.remover.Remove(bmp.File.Path())
@@ -99,7 +100,7 @@ func (a *Action) backup() {
 }
 
 // validate - validate action.
-func (a *Action) validate() error {
+func (a Action) validate() error {
 	if a.cfg == nil {
 		return fmt.Errorf("%w: config is nil in remove", types.ErrInvalidArguments)
 	}

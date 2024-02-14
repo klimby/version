@@ -3,6 +3,7 @@ package bump
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 
@@ -18,7 +19,7 @@ import (
 
 // B bump files by version.
 type B struct {
-	rw   fsys.ReadWriter
+	rw   readWriter
 	repo gitRepo
 	bcp  backupSrv
 }
@@ -31,9 +32,14 @@ type backupSrv interface {
 	Create(path string) error
 }
 
+type readWriter interface {
+	Read(string) (io.ReadCloser, error)
+	Write(patch string, flag int) (io.WriteCloser, error)
+}
+
 // Args is a Bump arguments.
 type Args struct {
-	RW     fsys.ReadWriter
+	RW     readWriter
 	Repo   gitRepo
 	Backup backupSrv
 }
@@ -41,7 +47,7 @@ type Args struct {
 // New creates new Bump.
 func New(args ...func(arg *Args)) *B {
 	a := &Args{
-		RW:     fsys.NewFS(),
+		RW:     fsys.New(),
 		Backup: backup.New(),
 	}
 

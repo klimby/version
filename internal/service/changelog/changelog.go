@@ -29,7 +29,7 @@ var (
 // Generator generates changelog.
 type Generator struct {
 	repo gitRepo
-	rw   fsys.ReadWriter
+	rw   readWriter
 	bcp  backupSrv
 	f    fsys.File
 	nms  []config.CommitName
@@ -53,10 +53,15 @@ type backupSrv interface {
 	Create(path string) error
 }
 
+type readWriter interface {
+	Read(string) (io.ReadCloser, error)
+	Write(patch string, flag int) (io.WriteCloser, error)
+}
+
 // Args is a Generator arguments.
 type Args struct {
 	Repo        gitRepo
-	RW          fsys.ReadWriter
+	RW          readWriter
 	Backup      backupSrv
 	ConfigFile  fsys.File
 	CommitNames []config.CommitName
@@ -65,7 +70,7 @@ type Args struct {
 // New creates new Generator.
 func New(args ...func(arg *Args)) *Generator {
 	a := &Args{
-		RW:         fsys.NewFS(),
+		RW:         fsys.New(),
 		Backup:     backup.New(),
 		ConfigFile: fsys.File(viper.GetString(key.ChangelogFileName)),
 	}

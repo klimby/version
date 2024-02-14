@@ -5,88 +5,77 @@ import (
 
 	"github.com/klimby/version/internal/config"
 	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_removeCmd(t *testing.T) {
-	helper := &__helpCaller{}
+	helperMock := __newHelpMock()
 
 	removeCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		t.Helper()
-		helper.called = true
+		helperMock.Help()
 	})
 
 	config.Init(func(options *config.Options) {
 		options.TestingSkipDIInit = true
 	})
 
+	type wantCall struct {
+		backup bool
+		help   bool
+	}
+
 	tests := []struct {
-		name           string
-		arg            string
-		wantCallBackup bool
-		wantCallHelp   bool
-		wantErr        bool
+		name      string
+		arg       string
+		wantCall  wantCall
+		assertion assert.ErrorAssertionFunc
 	}{
 		{
-			name:           "call backup",
-			arg:            "--backup",
-			wantCallBackup: true,
-			wantErr:        false,
+			name: "call backup",
+			arg:  "--backup",
+			wantCall: wantCall{
+				backup: true,
+			},
+			assertion: assert.NoError,
 		},
 		{
-			name:         "call without args",
-			arg:          "",
-			wantCallHelp: true,
-			wantErr:      false,
+			name: "call without args",
+			arg:  "",
+			wantCall: wantCall{
+				help: true,
+			},
+			assertion: assert.NoError,
 		},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			//t.Parallel()
-
 			t.Cleanup(func() {
-				helper.called = false
+				helperMock = __newHelpMock()
 				removeCmd.ResetFlags()
 				initRemoveCmd()
 			})
 
-			runner := &__runner{}
-			command.SetForce(runner)
+			runnerMock := __newRunnerMock(nil)
+			command.SetForce(runnerMock)
 
 			rootCmd.SetArgs([]string{"remove", tt.arg})
 
-			err := rootCmd.Execute()
+			tt.assertion(t, rootCmd.Execute(), "rootCmd.Execute() error = %v, wantErr %v", tt.assertion, false)
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("removeCmd() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantCall.backup {
+				runnerMock.AssertCalled(t, "Run")
+			} else {
+				runnerMock.AssertNotCalled(t, "Run")
 			}
 
-			if tt.wantCallBackup != runner.called {
-				t.Errorf("removeCmd() error = %v, wantErr %v", "not called", tt.wantCallBackup)
-			}
-
-			if tt.wantCallHelp != helper.called {
-				t.Errorf("removeCmd() error = %v, wantErr %v", "not called", tt.wantCallHelp)
+			if tt.wantCall.help {
+				helperMock.AssertCalled(t, "Help")
+			} else {
+				helperMock.AssertNotCalled(t, "Help")
 			}
 		})
 	}
 
-}
-
-type __runner struct {
-	called bool
-}
-
-func (r *__runner) Run() error {
-	r.called = true
-
-	return nil
-}
-
-type __helpCaller struct {
-	called bool
-}
-
-func (h *__helpCaller) Help() {
-	h.called = true
 }

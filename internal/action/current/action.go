@@ -37,7 +37,7 @@ func New(args ...func(arg *Args)) *Action {
 }
 
 // Run action.
-func (a *Action) Run() error {
+func (a Action) Run() error {
 	if err := a.validate(); err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (a *Action) Run() error {
 }
 
 // validate action.
-func (a *Action) validate() error {
+func (a Action) validate() error {
 	if a.repo == nil {
 		return fmt.Errorf("%w: repo is nil in current", types.ErrInvalidArguments)
 	}

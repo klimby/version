@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/klimby/version/internal/config"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_currentCmd(t *testing.T) {
@@ -12,21 +13,13 @@ func Test_currentCmd(t *testing.T) {
 	})
 
 	t.Run("current", func(t *testing.T) {
-		//t.Parallel()
-
-		runner := &__runner{}
-		command.SetForce(runner)
+		runnerMock := __newRunnerMock(nil)
+		command.SetForce(runnerMock)
 
 		rootCmd.SetArgs([]string{currentCmd.Use})
 
-		err := rootCmd.Execute()
-		if err != nil {
-			t.Errorf("currentCmd() error = %v, wantErr %v", err, false)
-		}
+		assert.NoError(t, rootCmd.Execute(), "currentCmd()")
 
-		if !runner.called {
-			t.Errorf("currentCmd() runner.called = %v, want %v", runner.called, true)
-		}
-
+		runnerMock.AssertExpectations(t)
 	})
 }

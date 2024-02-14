@@ -9,8 +9,8 @@ import (
 // removeCmd represents the remove command.
 var removeCmd = &cobra.Command{
 	Use:           "remove",
-	Short:         "Remove files",
-	Long:          `Remove backup files, if exists`,
+	Short:         "RemoveAll files",
+	Long:          `RemoveAll backup files, if exists`,
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	Example:       `version remove --backup`,

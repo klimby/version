@@ -123,7 +123,7 @@ func New(args ...func(arg *Args)) *Action {
 }
 
 // Run action.
-func (a *Action) Run() error {
+func (a Action) Run() error {
 	if err := a.validate(); err != nil {
 		return err
 	}
@@ -149,8 +149,7 @@ func (a *Action) Run() error {
 }
 
 // prepare the next version. Run only bump files and commands before.
-func (a *Action) prepare() (version.V, error) {
-
+func (a Action) prepare() (version.V, error) {
 	if err := a.checkClean(); err != nil {
 		return "", err
 	}
@@ -176,7 +175,7 @@ func (a *Action) prepare() (version.V, error) {
 }
 
 // apply the next version. Run only changelog, add modified files, commit tag and commands after.
-func (a *Action) apply(nextV version.V) error {
+func (a Action) apply(nextV version.V) error {
 	if err := a.writeChangelog(nextV); err != nil {
 		if !errors.Is(err, changelog.ErrWarning) {
 			return err
@@ -193,15 +192,11 @@ func (a *Action) apply(nextV version.V) error {
 		return err
 	}
 
-	if err := a.runCommands(a.cfg.CommandsAfter(), nextV); err != nil {
-		return err
-	}
-
-	return nil
+	return a.runCommands(a.cfg.CommandsAfter(), nextV)
 }
 
 // validate action.
-func (a *Action) validate() error {
+func (a Action) validate() error {
 	if a.actionType == ActionUnknown {
 		return fmt.Errorf("%w: action type is unknown", types.ErrInvalidArguments)
 	}
@@ -234,7 +229,7 @@ func (a *Action) validate() error {
 }
 
 // checkClean checks if the repository is clean.
-func (a *Action) checkClean() error {
+func (a Action) checkClean() error {
 	isClean, err := a.repo.IsClean()
 	if err != nil {
 		return err
@@ -254,7 +249,7 @@ func (a *Action) checkClean() error {
 }
 
 // nextVersion returns the next version.
-func (a *Action) nextVersion() (version.V, error) {
+func (a Action) nextVersion() (version.V, error) {
 	nextV, exists, err := a.repo.NextVersion(a.actionType.gitNextType(), a.customVersion)
 	if err != nil {
 		return "", err
@@ -272,7 +267,7 @@ func (a *Action) nextVersion() (version.V, error) {
 }
 
 // checkDowngrade checks if the version is not downgraded.
-func (a *Action) checkDowngrade(v version.V) error {
+func (a Action) checkDowngrade(v version.V) error {
 	if err := a.repo.CheckDowngrade(v); err != nil {
 		if !viper.GetBool(key.AllowDowngrades) {
 			return err
@@ -285,7 +280,7 @@ func (a *Action) checkDowngrade(v version.V) error {
 }
 
 // writeChangelog writes the changelog.
-func (a *Action) writeChangelog(v version.V) error {
+func (a Action) writeChangelog(v version.V) error {
 	if !viper.GetBool(key.GenerateChangelog) {
 		return nil
 	}
@@ -294,7 +289,7 @@ func (a *Action) writeChangelog(v version.V) error {
 }
 
 // runCommands runs commands.
-func (a *Action) runCommands(cs []config.Command, v version.V) error {
+func (a Action) runCommands(cs []config.Command, v version.V) error {
 	dryMode := viper.GetBool(key.DryRun)
 
 	for _, c := range cs {
