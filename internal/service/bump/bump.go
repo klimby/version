@@ -1,11 +1,9 @@
 package bump
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
-	"regexp"
 
 	"github.com/klimby/version/internal/config"
 	"github.com/klimby/version/internal/config/key"
@@ -19,9 +17,10 @@ import (
 
 // B bump files by version.
 type B struct {
-	rw   readWriter
-	repo gitRepo
-	bcp  backupSrv
+	rw      readWriter
+	repo    gitRepo
+	bcp     backupSrv
+	process contentProcessor
 }
 
 type gitRepo interface {
@@ -37,11 +36,17 @@ type readWriter interface {
 	Write(patch string, flag int) (io.WriteCloser, error)
 }
 
+type contentProcessor interface {
+	CustomFile(r io.Reader, bmp config.BumpFile, v version.V) ([]string, bool, error)
+	PredefinedJSON(r io.Reader, bmp config.BumpFile, v version.V) ([]string, bool, error)
+}
+
 // Args is a Bump arguments.
 type Args struct {
 	RW     readWriter
 	Repo   gitRepo
 	Backup backupSrv
+	Proc   contentProcessor
 }
 
 // New creates new Bump.
@@ -49,20 +54,18 @@ func New(args ...func(arg *Args)) *B {
 	a := &Args{
 		RW:     fsys.New(),
 		Backup: backup.New(),
+		Proc:   &process{},
 	}
 
 	for _, arg := range args {
 		arg(a)
 	}
 
-	if a.Repo == nil {
-		panic("invalid backup argument: repo is nil")
-	}
-
 	return &B{
-		rw:   a.RW,
-		repo: a.Repo,
-		bcp:  a.Backup,
+		rw:      a.RW,
+		repo:    a.Repo,
+		bcp:     a.Backup,
+		process: a.Proc,
 	}
 }
 
@@ -70,17 +73,19 @@ func New(args ...func(arg *Args)) *B {
 func (b B) Apply(bumps []config.BumpFile, v version.V) {
 	for _, bmp := range bumps {
 		if err := b.bcp.Create(bmp.File.Path()); err != nil {
-			console.Error(err.Error())
+			console.Error(fmt.Sprintf("create backup file %s error: %s", bmp.File.String(), err.Error()))
 		}
 
 		changed, err := b.applyToFile(bmp, v)
 		if err != nil {
-			console.Warn(err.Error())
+			console.Warn(fmt.Sprintf("bump file %s error: %s", bmp.File.String(), err.Error()))
+
+			continue
 		}
 
 		if changed {
 			if err := b.repo.Add(bmp.File); err != nil {
-				console.Warn(err.Error())
+				console.Warn(fmt.Sprintf("add file %s to git error: %s", bmp.File.String(), err.Error()))
 			}
 		}
 	}
@@ -88,29 +93,13 @@ func (b B) Apply(bumps []config.BumpFile, v version.V) {
 
 // applyToFile bumps file.
 func (b B) applyToFile(bmp config.BumpFile, v version.V) (bool, error) {
-	var content []string
-	changed := false
-
-	if bmp.IsPredefinedJSON() {
-		c, ch, err := b.bumpPredefinedJSON(bmp.File.Path(), v)
-		if err != nil {
-			return false, fmt.Errorf("bump predefined json file %s error: %w", bmp.File.String(), err)
-		}
-
-		content = c
-		changed = ch
-	} else {
-		c, ch, err := b.bumpCustomFile(bmp, v)
-		if err != nil {
-			return false, fmt.Errorf("bump custom file %s error: %w", bmp.File.String(), err)
-		}
-
-		content = c
-		changed = ch
+	content, changed, err := b.read(bmp, v)
+	if err != nil {
+		return false, fmt.Errorf("bump file %s error: %w", bmp.File.String(), err)
 	}
 
 	if len(content) == 0 {
-		return false, fmt.Errorf("file %s is not supported", bmp.File.String())
+		return false, fmt.Errorf("file %s is empty", bmp.File.String())
 	}
 
 	if !changed {
@@ -130,50 +119,11 @@ func (b B) applyToFile(bmp config.BumpFile, v version.V) (bool, error) {
 	return changed, nil
 }
 
-// bumpPredefinedJSON bumps predefined json file (package.json, composer.json).
-func (b B) bumpPredefinedJSON(patch string, v version.V) (_ []string, changed bool, err error) {
-	r, err := b.rw.Read(patch)
-	if err != nil {
-		return nil, changed, fmt.Errorf("open file %s error: %w", patch, err)
-	}
-
-	defer func() {
-		if e := r.Close(); e != nil {
-			if err == nil {
-				err = fmt.Errorf("close file %s error: %w", patch, e)
-			}
-		}
-	}()
-
-	scanner := bufio.NewScanner(r)
-	versionRegex := regexp.MustCompile(`"version"\s*:\s*".*?"`)
-	var content []string
-
-	replacer := `"version": "` + v.FormatString() + `"`
-
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		if !changed && versionRegex.MatchString(line) {
-			line = versionRegex.ReplaceAllString(line, replacer)
-			changed = true
-		}
-
-		content = append(content, line)
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, changed, fmt.Errorf("scan file %s error: %w", patch, err)
-	}
-
-	return content, changed, nil
-}
-
-// bumpCustomFile bumps custom file.
-func (b B) bumpCustomFile(bmp config.BumpFile, v version.V) (_ []string, changed bool, err error) {
+// read reads file.
+func (b B) read(bmp config.BumpFile, v version.V) (_ []string, changed bool, err error) {
 	r, err := b.rw.Read(bmp.File.Path())
 	if err != nil {
-		return nil, changed, fmt.Errorf("open file %s error: %w", bmp.File.Path(), err)
+		return nil, false, fmt.Errorf("open file %s error: %w", bmp.File.Path(), err)
 	}
 
 	defer func() {
@@ -184,64 +134,11 @@ func (b B) bumpCustomFile(bmp config.BumpFile, v version.V) (_ []string, changed
 		}
 	}()
 
-	scanner := bufio.NewScanner(r)
-	versionRegex := regexp.MustCompile(`\d+\.\d+\.\d+`)
-	var content []string
-
-	regArr := make([]*regexp.Regexp, 0, len(bmp.RegExp))
-
-	for _, r := range bmp.RegExp {
-		rgx, err := regexp.Compile(r)
-		if err != nil {
-			console.Warn(fmt.Sprintf("file %s regexp %s error: %s", bmp.File.String(), r, err))
-
-			continue
-		}
-
-		regArr = append(regArr, rgx)
+	if bmp.IsPredefinedJSON() {
+		return b.process.PredefinedJSON(r, bmp, v)
 	}
 
-	start := 0
-	end := int(^uint(0) >> 1)
-
-	if bmp.HasPositions() {
-		start = bmp.Start
-		end = bmp.End
-	}
-
-	lineNum := 0
-
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		if lineNum >= start && lineNum <= end {
-			if versionRegex.MatchString(line) {
-				if len(regArr) > 0 {
-					for _, r := range regArr {
-						if r.MatchString(line) {
-							line = versionRegex.ReplaceAllString(line, v.FormatString())
-							changed = true
-
-							break
-						}
-					}
-				} else {
-					line = versionRegex.ReplaceAllString(line, v.FormatString())
-					changed = true
-				}
-			}
-		}
-
-		content = append(content, line)
-
-		lineNum++
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, changed, fmt.Errorf("scan file %s error: %w", bmp.File.String(), err)
-	}
-
-	return content, changed, nil
+	return b.process.CustomFile(r, bmp, v)
 }
 
 // write writes content to file.
