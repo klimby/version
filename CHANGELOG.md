@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [Conventional CommitsFromLast](https://www.conventionalcommits.org/en/v1.0.0/) for commit guidelines.
 
+## 1.0.10 (2024-02-18)
+
+### Breaking changes
+
+* tests ([b3e1307](https://github.com/klimby/version/commit/b3e1307607c01b36c32a1ab8c455b53808b6f098))
+    * BREAKING CHANGE: foo
+
+### Tests
+
+* bump and backup ([aca94ab](https://github.com/klimby/version/commit/aca94abe330f79ed99666058f96760c2f78b8dba))
+* **cmd:** create tests ([e2d2962](https://github.com/klimby/version/commit/e2d296241adfb88418bff2071d95286e2276083d))
+
+### Builds
+
+* replace build ([8b18a44](https://github.com/klimby/version/commit/8b18a444b3aa90902caa9a4b95b1e60eb3708bee))
+
 ## 1.0.9 (2024-02-10)
 
 ### Features
