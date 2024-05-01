@@ -1,3 +1,4 @@
+// Package console provides console service.
 package console
 
 import (

@@ -14,7 +14,7 @@ var removeCmd = &cobra.Command{
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	Example:       `version remove --backup`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		actionType := remove.ActionUnknown
 
 		flags := []remove.ActionType{remove.ActionBackup}

@@ -1,3 +1,4 @@
+// Package remove provides remove action.
 package remove
 
 import (

@@ -1,3 +1,4 @@
+// Package version provides a version type and methods for working with versions.
 package version
 
 import (

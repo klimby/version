@@ -15,7 +15,7 @@ var generateCmd = &cobra.Command{
 	SilenceUsage:  true,
 	Example: `./version generate --config-file
 ./version generate --changelog`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		actionType := generate.FileUnknown
 
 		flags := []generate.ActionType{generate.FileConfig, generate.FileChangelog}

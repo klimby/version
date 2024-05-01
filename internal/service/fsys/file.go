@@ -1,3 +1,4 @@
+// Package fsys provides file system service.
 package fsys
 
 import (

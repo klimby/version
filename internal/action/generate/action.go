@@ -1,3 +1,4 @@
+// Package generate provides generate changelog action.
 package generate
 
 import (
@@ -46,7 +47,7 @@ type backupService interface {
 	Create(path string) error
 }
 
-// Args is a Action arguments.
+// Args is an Action arguments.
 type Args struct {
 	CfgGenerator generator
 	ChangelogGen generator

@@ -13,7 +13,7 @@ var currentCmd = &cobra.Command{
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	Example:       `./version current`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		action := current.New(func(args *current.Args) {
 			args.Repo = di.C.Repo
 		})

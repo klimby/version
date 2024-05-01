@@ -21,7 +21,7 @@ var nextCmd = &cobra.Command{
 ./version next --minor
 ./version next --patch
 ./version next --ver=1.2.3`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		actionType := next.ActionUnknown
 		v := version.V("")
 

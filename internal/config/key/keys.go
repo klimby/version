@@ -1,3 +1,4 @@
+// Package key store keys for viper.
 package key
 
 // Viper keys.

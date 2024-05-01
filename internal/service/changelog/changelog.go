@@ -1,3 +1,4 @@
+// Package changelog provides changelog generator.
 package changelog
 
 import (

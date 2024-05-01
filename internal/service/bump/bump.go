@@ -1,3 +1,4 @@
+// Package bump provides bump files by version.
 package bump
 
 import (

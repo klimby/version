@@ -1,3 +1,4 @@
+// Package current Current package provides current action.
 package current
 
 import (

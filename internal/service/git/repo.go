@@ -1,3 +1,4 @@
+// Package git provides git repository service.
 package git
 
 import (

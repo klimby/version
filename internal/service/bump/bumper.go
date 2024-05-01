@@ -56,8 +56,8 @@ func (process) CustomFile(r io.Reader, bmp config.BumpFile, v version.V) (_ []st
 		if lineNum >= start && lineNum <= end {
 			if versionRegex.MatchString(line) {
 				if len(regArr) > 0 {
-					for _, r := range regArr {
-						if r.MatchString(line) {
+					for i := range regArr {
+						if regArr[i].MatchString(line) {
 							line = versionRegex.ReplaceAllString(line, v.FormatString())
 							changed = true
 
@@ -85,7 +85,7 @@ func (process) CustomFile(r io.Reader, bmp config.BumpFile, v version.V) (_ []st
 
 // handleBumpFile handles BumpFile.
 // Returns start, end lines and slice of regexp.Regexp.
-func handleBumpFile(bmp config.BumpFile) (start int, end int, regs []regexp.Regexp) {
+func handleBumpFile(bmp config.BumpFile) (start, end int, regs []regexp.Regexp) {
 	start = 0
 	end = int(^uint(0) >> 1)
 

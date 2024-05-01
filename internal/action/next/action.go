@@ -1,3 +1,4 @@
+// Package next provides next version action.
 package next
 
 import (

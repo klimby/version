@@ -26,9 +26,11 @@ type Option struct {
 func New(opts ...func(*Option)) *FS {
 	o := &Option{
 		Write: func(p string, flag int) (io.WriteCloser, error) {
+			//nolint:gosec
 			return os.OpenFile(p, flag, 0o644)
 		},
 		Read: func(p string) (io.ReadCloser, error) {
+			//nolint:gosec
 			return os.OpenFile(p, os.O_RDONLY, 0o644)
 		},
 		Remove: os.RemoveAll,

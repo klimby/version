@@ -1,3 +1,4 @@
+// Package cmd provides CLI commands.
 package cmd
 
 import (
@@ -24,7 +25,7 @@ var rootCmd = &cobra.Command{
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+	PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 		if !di.C.IsInit {
 			return errors.New("container is not initialized")
 		}
