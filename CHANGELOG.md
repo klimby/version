@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [Conventional CommitsFromLast](https://www.conventionalcommits.org/en/v1.0.0/) for commit guidelines.
 
+## 1.0.11 (2024-05-01)
+
+### Builds
+
+* move to go v1.22 ([89c4a30](https://github.com/klimby/version/commit/89c4a30d673c3d94ff610c09977b68ab59a1cdbb))
+
 ## 1.0.10 (2024-02-18)
 
 ### Breaking changes
