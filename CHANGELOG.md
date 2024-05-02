@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [Conventional CommitsFromLast](https://www.conventionalcommits.org/en/v1.0.0/) for commit guidelines.
 
+## 1.0.12 (2024-05-02)
+
+### Bug Fixes
+
+* linter errors ([6066f66](https://github.com/klimby/version/commit/6066f66ed6210fb1cdf32c0fd8c06490af21d521))
+
 ## 1.0.11 (2024-05-01)
 
 ### Builds
